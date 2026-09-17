@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+      Arial, 'Noto Sans', sans-serif;
+
+    /* Calm paper-and-ink palette: nothing neon, nothing that reads as a warning by default. */
+    --canvas: 248 250 252;
+    --surface: 255 255 255;
+    --line: 226 232 240;
+    --ink: 15 30 48;
+    --muted: 92 108 130;
+    --accent: 22 90 150;
+    --accent-soft: 232 241 249;
+    --on-accent: 255 255 255;
+    --positive: 21 115 87;
+    --caution: 154 92 10;
+    --danger: 176 42 42;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --canvas: 13 18 27;
+      --surface: 22 29 41;
+      --line: 44 55 72;
+      --ink: 229 237 247;
+      --muted: 150 165 186;
+      --accent: 122 178 235;
+      --accent-soft: 30 43 61;
+      --on-accent: 10 20 33;
+      --positive: 106 202 168;
+      --caution: 227 176 92;
+      --danger: 241 141 141;
+    }
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-family: var(--font-sans);
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2;
+    --tw-ring-offset-color: rgb(var(--canvas));
+  }
+
+  ::selection {
+    background: rgb(var(--accent) / 0.22);
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3
+      text-base font-semibold text-on-accent transition
+      hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-quiet {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line
+      bg-surface px-4 py-2.5 text-sm font-medium text-ink transition
+      hover:border-accent disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

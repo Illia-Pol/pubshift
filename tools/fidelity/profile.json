@@ -1,0 +1,3083 @@
+{
+  "files": 30,
+  "text": {
+    "events": 1638,
+    "chars": 102346
+  },
+  "assets": {
+    "count": 0,
+    "bytes": 0
+  },
+  "eventTypes": 27,
+  "propertyKeys": 99,
+  "events": {
+    "closeParagraph": {
+      "count": 1306,
+      "files": 24,
+      "props": {}
+    },
+    "closeSpan": {
+      "count": 1519,
+      "files": 24,
+      "props": {}
+    },
+    "closeTableCell": {
+      "count": 266,
+      "files": 7,
+      "props": {}
+    },
+    "closeTableRow": {
+      "count": 89,
+      "files": 7,
+      "props": {}
+    },
+    "coveredTableCell": {
+      "count": 64,
+      "files": 4,
+      "props": {
+        "librevenge:column": 64,
+        "librevenge:row": 64
+      }
+    },
+    "drawPath": {
+      "count": 157,
+      "files": 8,
+      "props": {
+        "svg:d": 157
+      }
+    },
+    "drawPolygon": {
+      "count": 244,
+      "files": 14,
+      "props": {
+        "svg:points": 244
+      }
+    },
+    "endDocument": {
+      "count": 30,
+      "files": 30,
+      "props": {}
+    },
+    "endLayer": {
+      "count": 131,
+      "files": 13,
+      "props": {}
+    },
+    "endPage": {
+      "count": 58,
+      "files": 26,
+      "props": {}
+    },
+    "endTableObject": {
+      "count": 16,
+      "files": 7,
+      "props": {}
+    },
+    "endTextObject": {
+      "count": 196,
+      "files": 22,
+      "props": {}
+    },
+    "insertLineBreak": {
+      "count": 3,
+      "files": 1,
+      "props": {}
+    },
+    "insertSpace": {
+      "count": 678,
+      "files": 4,
+      "props": {}
+    },
+    "insertTab": {
+      "count": 130,
+      "files": 4,
+      "props": {}
+    },
+    "metaData": {
+      "count": 30,
+      "files": 30,
+      "props": {
+        "dc:date": 18,
+        "meta:creation-date": 18,
+        "dc:creator": 12,
+        "meta:initial-creator": 12,
+        "dc:description": 1,
+        "dc:subject": 1,
+        "dc:title": 1,
+        "librevenge:category": 1,
+        "meta:keyword": 1
+      }
+    },
+    "openParagraph": {
+      "count": 1306,
+      "files": 24,
+      "props": {
+        "fo:text-align": 1306,
+        "fo:line-height": 296,
+        "fo:margin-left": 244,
+        "fo:margin-bottom": 225,
+        "fo:text-indent": 225,
+        "fo:margin-top": 38,
+        "fo:margin-right": 2
+      }
+    },
+    "openSpan": {
+      "count": 1519,
+      "files": 24,
+      "props": {
+        "fo:color": 1519,
+        "fo:font-size": 1517,
+        "style:font-name": 1516,
+        "fo:country": 1383,
+        "fo:language": 1383,
+        "fo:font-weight": 345,
+        "fo:font-style": 52,
+        "style:text-underline-mode": 48,
+        "style:text-underline-style": 48,
+        "style:text-underline-type": 48,
+        "style:text-underline-width": 48,
+        "fo:font-variant": 40,
+        "fo:text-transform": 16,
+        "style:text-position": 6,
+        "fo:script": 2,
+        "style:font-relief": 2,
+        "style:text-outline": 1,
+        "fo:text-shadow": 1,
+        "fo:text-scale": 1
+      }
+    },
+    "openTableCell": {
+      "count": 266,
+      "files": 7,
+      "props": {
+        "librevenge:column": 266,
+        "librevenge:row": 266,
+        "table:number-rows-spanned": 26,
+        "table:number-columns-spanned": 6
+      }
+    },
+    "openTableRow": {
+      "count": 89,
+      "files": 7,
+      "props": {
+        "librevenge:row-height": 89
+      }
+    },
+    "setStyle": {
+      "count": 800,
+      "files": 25,
+      "props": {
+        "draw:fill": 800,
+        "draw:stroke": 800,
+        "svg:fill-rule": 280,
+        "draw:fill-color": 244,
+        "draw:opacity": 244,
+        "svg:stroke-color": 167,
+        "svg:stroke-width": 167,
+        "draw:fill-image": 90,
+        "draw:fill-image-ref-point": 90,
+        "librevenge:mime-type": 90,
+        "style:repeat": 78,
+        "draw:angle": 36,
+        "libmspub:shade": 36,
+        "svg:linearGradient": 36,
+        "draw:shadow": 12,
+        "draw:shadow-color": 12,
+        "draw:shadow-offset-x": 12,
+        "draw:shadow-offset-y": 12,
+        "draw:shadow-opacity": 12,
+        "draw:blue": 7,
+        "draw:color-mode": 7,
+        "draw:green": 7,
+        "draw:red": 7,
+        "draw:distance": 6,
+        "draw:dots1": 6,
+        "draw:dots1-length": 6,
+        "svg:stroke-linecap": 6,
+        "librevenge:rotate": 3
+      }
+    },
+    "startDocument": {
+      "count": 30,
+      "files": 30,
+      "props": {}
+    },
+    "startLayer": {
+      "count": 131,
+      "files": 13,
+      "props": {}
+    },
+    "startPage": {
+      "count": 58,
+      "files": 26,
+      "props": {
+        "svg:height": 58,
+        "svg:width": 58
+      }
+    },
+    "startTableObject": {
+      "count": 16,
+      "files": 7,
+      "props": {
+        "librevenge:table-columns": 16,
+        "svg:height": 16,
+        "svg:width": 16,
+        "svg:x": 16,
+        "svg:y": 16
+      }
+    },
+    "startTextObject": {
+      "count": 196,
+      "files": 22,
+      "props": {
+        "fo:padding-bottom": 196,
+        "fo:padding-left": 196,
+        "fo:padding-right": 196,
+        "fo:padding-top": 196,
+        "svg:height": 196,
+        "svg:width": 196,
+        "svg:x": 196,
+        "svg:y": 196,
+        "fo:column-gap": 183,
+        "draw:textarea-vertical-align": 44,
+        "librevenge:rotate": 2
+      }
+    },
+    "text": {
+      "count": 1638,
+      "files": 24,
+      "props": {}
+    }
+  },
+  "properties": {
+    "dc:creator": {
+      "count": 12,
+      "files": 12,
+      "kinds": {
+        "string": 12
+      },
+      "events": {
+        "metaData": 12
+      },
+      "example": "Author",
+      "samples": [
+        "Author",
+        "RobertWKitsock",
+        "Melissa",
+        "IEUser",
+        "user",
+        "Christine Blumenthal",
+        "Croads",
+        "don Alfonso Capuano"
+      ]
+    },
+    "dc:date": {
+      "count": 18,
+      "files": 18,
+      "kinds": {
+        "string": 18
+      },
+      "events": {
+        "metaData": 18
+      },
+      "example": "1601-01-01T01:50:16Z",
+      "samples": [
+        "1601-01-01T01:50:16Z",
+        "2008-08-25T19:32:46Z",
+        "2015-06-26T23:32:07Z",
+        "2016-01-13T07:03:21Z",
+        "2015-06-26T23:30:30Z",
+        "2016-01-13T06:42:29Z",
+        "2013-02-08T15:32:35Z",
+        "2013-02-14T06:32:17Z"
+      ]
+    },
+    "dc:description": {
+      "count": 1,
+      "files": 1,
+      "kinds": {
+        "string": 1
+      },
+      "events": {
+        "metaData": 1
+      },
+      "example": "Comments"
+    },
+    "dc:subject": {
+      "count": 1,
+      "files": 1,
+      "kinds": {
+        "string": 1
+      },
+      "events": {
+        "metaData": 1
+      },
+      "example": "Subject"
+    },
+    "dc:title": {
+      "count": 1,
+      "files": 1,
+      "kinds": {
+        "string": 1
+      },
+      "events": {
+        "metaData": 1
+      },
+      "example": "Title"
+    },
+    "draw:angle": {
+      "count": 36,
+      "files": 2,
+      "kinds": {
+        "measure": 36
+      },
+      "units": {
+        "in": 36
+      },
+      "events": {
+        "setStyle": 36
+      },
+      "example": {
+        "v": 0,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0,
+          "u": "in"
+        },
+        {
+          "v": 45,
+          "u": "in"
+        },
+        {
+          "v": 90,
+          "u": "in"
+        }
+      ]
+    },
+    "draw:blue": {
+      "count": 7,
+      "files": 2,
+      "kinds": {
+        "measure": 7
+      },
+      "units": {
+        "%": 7
+      },
+      "events": {
+        "setStyle": 7
+      },
+      "example": {
+        "v": 0.4,
+        "u": "%"
+      },
+      "samples": [
+        {
+          "v": 0.4,
+          "u": "%"
+        },
+        {
+          "v": 0.8,
+          "u": "%"
+        }
+      ]
+    },
+    "draw:color-mode": {
+      "count": 7,
+      "files": 2,
+      "kinds": {
+        "string": 7
+      },
+      "events": {
+        "setStyle": 7
+      },
+      "example": "greyscale"
+    },
+    "draw:distance": {
+      "count": 6,
+      "files": 1,
+      "kinds": {
+        "measure": 6
+      },
+      "units": {
+        "in": 6
+      },
+      "events": {
+        "setStyle": 6
+      },
+      "example": {
+        "v": 0.09375,
+        "u": "in"
+      }
+    },
+    "draw:dots1": {
+      "count": 6,
+      "files": 1,
+      "kinds": {
+        "measure": 6
+      },
+      "units": {
+        "(generic)": 6
+      },
+      "events": {
+        "setStyle": 6
+      },
+      "example": {
+        "v": 1,
+        "u": ""
+      }
+    },
+    "draw:dots1-length": {
+      "count": 6,
+      "files": 1,
+      "kinds": {
+        "measure": 6
+      },
+      "units": {
+        "in": 6
+      },
+      "events": {
+        "setStyle": 6
+      },
+      "example": {
+        "v": 0.125,
+        "u": "in"
+      }
+    },
+    "draw:fill": {
+      "count": 800,
+      "files": 25,
+      "kinds": {
+        "string": 800
+      },
+      "events": {
+        "setStyle": 800
+      },
+      "example": "solid",
+      "samples": [
+        "solid",
+        "none",
+        "bitmap",
+        "gradient"
+      ]
+    },
+    "draw:fill-color": {
+      "count": 244,
+      "files": 13,
+      "kinds": {
+        "string": 244
+      },
+      "events": {
+        "setStyle": 244
+      },
+      "example": "#0000e6",
+      "samples": [
+        "#0000e6",
+        "#ffd733",
+        "#ffffff",
+        "#000000",
+        "#404040",
+        "#fbfbf7",
+        "#6699cc",
+        "#000066"
+      ]
+    },
+    "draw:fill-image": {
+      "count": 90,
+      "files": 12,
+      "kinds": {
+        "string": 90
+      },
+      "events": {
+        "setStyle": 90
+      },
+      "example": "AQAJAAADZzoAAAUA4gIAAAAABQAAAAsCuf1l+gUAAAAMAur3/gUHAAAA/AIBAAAAAAAAAAQAAAAtAQAACQAAAPoCAAAAAAAAAAAAACIABAAAAC0BAQAEAAAA…",
+      "samples": [
+        "AQAJAAADZzoAAAUA4gIAAAAABQAAAAsCuf1l+gUAAAAMAur3/gUHAAAA/AIBAAAAAAAAAAQAAAAtAQAACQAAAPoCAAAAAAAAAAAAACIABAAAAC0BAQAEAAAA…",
+        "iVBORw0KGgoAAAANSUhEUgAABLAAAASyCAAAAACDgk0YAAAABGdBTUEAALGOfPtRkwAAAAlwSFlzAAAuIwAALiMBeKU/dgAAT9NJREFUeF7t3TuIHUm6KOq1…",
+        "AQAJAAADoB0AAAMAAgEAAAAABAAAAAMBCAAFAAAACwIt+aUCBQAAAAwCmgFEAgQAAAAGAQIABwAAAPwCAAAEDQ8AAAAEAAAALQEAAAgAAAD6AgUAAAAAAAAA…",
+        "/9j/4AAQSkZJRgABAQEAAQABAAD/7QIcUGhvdG9zaG9wIDMuMAA4QklNBAQAAAAAAZscAgAAAgACHAJ0AB+pIENvcmJpcy4gIEFsbCBSaWdodHMgUmVzZXJ2…",
+        "R0lGODlhZQBpAPQfAAAAAMDAwBpfZwA3PAAzADNmMzNmmWYzAGZmM2ZmmWaZZmaZzJlmAJlmZpmZZpmZzJnMzMyZAMyZmcz///+ZZv/MAP/Mmf/M////zM7c…",
+        "AQAJAAAD4QQAAAMA6AAAAAAABQAAAAwC+whlCAUAAAALAgAAAAAEAAAABQEBAAQAAAAEAQ0ABAAAAAYBAQAEAAAAAgECAAUAAAABAv////8EAAAALgEYAAgA…",
+        "AQAJAAADLgUAAAQAogAAAAAABQAAAAsCwOoGAAUAAAAMAnwnCx8FAAAABAENAAAABQAAAAYBAgAAAAcAAAD8AgAAAAAAAAAABAAAAC0BAAAIAAAA+gIFAAEA…",
+        "AQAJAAADjgQAAAQAlgAAAAAABQAAAAsCHfkJAAUAAAAMAtYK/x4FAAAABAENAAAABQAAAAYBAgAAAAcAAAD8AgAAAAAAAAAABAAAAC0BAAAIAAAA+gIFAAEA…"
+      ]
+    },
+    "draw:fill-image-ref-point": {
+      "count": 90,
+      "files": 12,
+      "kinds": {
+        "string": 90
+      },
+      "events": {
+        "setStyle": 90
+      },
+      "example": "top-left"
+    },
+    "draw:green": {
+      "count": 7,
+      "files": 2,
+      "kinds": {
+        "measure": 7
+      },
+      "units": {
+        "%": 7
+      },
+      "events": {
+        "setStyle": 7
+      },
+      "example": {
+        "v": 0,
+        "u": "%"
+      },
+      "samples": [
+        {
+          "v": 0,
+          "u": "%"
+        },
+        {
+          "v": 0.8,
+          "u": "%"
+        }
+      ]
+    },
+    "draw:opacity": {
+      "count": 244,
+      "files": 13,
+      "kinds": {
+        "measure": 244
+      },
+      "units": {
+        "%": 244
+      },
+      "events": {
+        "setStyle": 244
+      },
+      "example": {
+        "v": 1,
+        "u": "%"
+      },
+      "samples": [
+        {
+          "v": 1,
+          "u": "%"
+        },
+        {
+          "v": 0.5,
+          "u": "%"
+        }
+      ]
+    },
+    "draw:red": {
+      "count": 7,
+      "files": 2,
+      "kinds": {
+        "measure": 7
+      },
+      "units": {
+        "%": 7
+      },
+      "events": {
+        "setStyle": 7
+      },
+      "example": {
+        "v": 0,
+        "u": "%"
+      },
+      "samples": [
+        {
+          "v": 0,
+          "u": "%"
+        },
+        {
+          "v": 0.8,
+          "u": "%"
+        }
+      ]
+    },
+    "draw:shadow": {
+      "count": 12,
+      "files": 1,
+      "kinds": {
+        "string": 12
+      },
+      "events": {
+        "setStyle": 12
+      },
+      "example": "visible"
+    },
+    "draw:shadow-color": {
+      "count": 12,
+      "files": 1,
+      "kinds": {
+        "string": 12
+      },
+      "events": {
+        "setStyle": 12
+      },
+      "example": "#b2b2b2",
+      "samples": [
+        "#b2b2b2",
+        "#9999ff",
+        "#4d4d4d",
+        "#990000",
+        "#c0c0c0",
+        "#cbcbcb",
+        "#000099",
+        "#808080"
+      ]
+    },
+    "draw:shadow-offset-x": {
+      "count": 12,
+      "files": 1,
+      "kinds": {
+        "measure": 12
+      },
+      "units": {
+        "in": 12
+      },
+      "events": {
+        "setStyle": 12
+      },
+      "example": {
+        "v": 0.0416667,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.0416667,
+          "u": "in"
+        },
+        {
+          "v": 0.0277778,
+          "u": "in"
+        },
+        {
+          "v": 0.0972222,
+          "u": "in"
+        },
+        {
+          "v": -0.0694444,
+          "u": "in"
+        }
+      ]
+    },
+    "draw:shadow-offset-y": {
+      "count": 12,
+      "files": 1,
+      "kinds": {
+        "measure": 12
+      },
+      "units": {
+        "in": 12
+      },
+      "events": {
+        "setStyle": 12
+      },
+      "example": {
+        "v": 0.0277778,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.0277778,
+          "u": "in"
+        },
+        {
+          "v": 0.0416667,
+          "u": "in"
+        },
+        {
+          "v": -0.0972222,
+          "u": "in"
+        },
+        {
+          "v": 0.0833333,
+          "u": "in"
+        }
+      ]
+    },
+    "draw:shadow-opacity": {
+      "count": 12,
+      "files": 1,
+      "kinds": {
+        "measure": 12
+      },
+      "units": {
+        "%": 12
+      },
+      "events": {
+        "setStyle": 12
+      },
+      "example": {
+        "v": 0.800003,
+        "u": "%"
+      },
+      "samples": [
+        {
+          "v": 0.800003,
+          "u": "%"
+        },
+        {
+          "v": 1,
+          "u": "%"
+        }
+      ]
+    },
+    "draw:stroke": {
+      "count": 800,
+      "files": 25,
+      "kinds": {
+        "string": 800
+      },
+      "events": {
+        "setStyle": 800
+      },
+      "example": "none",
+      "samples": [
+        "none",
+        "dash",
+        "solid"
+      ]
+    },
+    "draw:textarea-vertical-align": {
+      "count": 44,
+      "files": 6,
+      "kinds": {
+        "string": 44
+      },
+      "events": {
+        "startTextObject": 44
+      },
+      "example": "middle",
+      "samples": [
+        "middle",
+        "bottom"
+      ]
+    },
+    "fo:color": {
+      "count": 1519,
+      "files": 24,
+      "kinds": {
+        "string": 1519
+      },
+      "events": {
+        "openSpan": 1519
+      },
+      "example": "#000000",
+      "samples": [
+        "#000000",
+        "#0000cc",
+        "#ffffff",
+        "#282e8c",
+        "#0000ff",
+        "#013c88",
+        "#008000",
+        "#800000"
+      ]
+    },
+    "fo:column-gap": {
+      "count": 183,
+      "files": 14,
+      "kinds": {
+        "measure": 183
+      },
+      "units": {
+        "in": 183
+      },
+      "events": {
+        "startTextObject": 183
+      },
+      "example": {
+        "v": 0.0791667,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.0791667,
+          "u": "in"
+        },
+        {
+          "v": 0.0787402,
+          "u": "in"
+        },
+        {
+          "v": 0.0777778,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:country": {
+      "count": 1383,
+      "files": 19,
+      "kinds": {
+        "string": 1383
+      },
+      "events": {
+        "openSpan": 1383
+      },
+      "example": "US",
+      "samples": [
+        "US",
+        "GB",
+        "DE",
+        "IT",
+        "FR",
+        "CZ",
+        "CS",
+        "TW"
+      ]
+    },
+    "fo:font-size": {
+      "count": 1517,
+      "files": 24,
+      "kinds": {
+        "measure": 1517
+      },
+      "units": {
+        "in": 1517
+      },
+      "events": {
+        "openSpan": 1517
+      },
+      "example": {
+        "v": 0.111111,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.111111,
+          "u": "in"
+        },
+        {
+          "v": 0.125,
+          "u": "in"
+        },
+        {
+          "v": 0.124114,
+          "u": "in"
+        },
+        {
+          "v": 0.527778,
+          "u": "in"
+        },
+        {
+          "v": 0.122222,
+          "u": "in"
+        },
+        {
+          "v": 1,
+          "u": "in"
+        },
+        {
+          "v": 0.0972222,
+          "u": "in"
+        },
+        {
+          "v": 0.138889,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:font-style": {
+      "count": 52,
+      "files": 7,
+      "kinds": {
+        "string": 52
+      },
+      "events": {
+        "openSpan": 52
+      },
+      "example": "italic"
+    },
+    "fo:font-variant": {
+      "count": 40,
+      "files": 5,
+      "kinds": {
+        "string": 40
+      },
+      "events": {
+        "openSpan": 40
+      },
+      "example": "small-caps"
+    },
+    "fo:font-weight": {
+      "count": 345,
+      "files": 10,
+      "kinds": {
+        "string": 345
+      },
+      "events": {
+        "openSpan": 345
+      },
+      "example": "bold"
+    },
+    "fo:language": {
+      "count": 1383,
+      "files": 19,
+      "kinds": {
+        "string": 1383
+      },
+      "events": {
+        "openSpan": 1383
+      },
+      "example": "en",
+      "samples": [
+        "en",
+        "de",
+        "it",
+        "fr",
+        "cs",
+        "sr",
+        "zh",
+        "ca"
+      ]
+    },
+    "fo:line-height": {
+      "count": 296,
+      "files": 7,
+      "kinds": {
+        "measure": 296
+      },
+      "units": {
+        "%": 296
+      },
+      "events": {
+        "openParagraph": 296
+      },
+      "example": {
+        "v": 1.15,
+        "u": "%"
+      },
+      "samples": [
+        {
+          "v": 1.15,
+          "u": "%"
+        },
+        {
+          "v": 1.28999,
+          "u": "%"
+        },
+        {
+          "v": 1.75,
+          "u": "%"
+        },
+        {
+          "v": 1.31999,
+          "u": "%"
+        },
+        {
+          "v": 1.53999,
+          "u": "%"
+        },
+        {
+          "v": 0.75,
+          "u": "%"
+        },
+        {
+          "v": 2.5,
+          "u": "%"
+        },
+        {
+          "v": 1.5,
+          "u": "%"
+        }
+      ]
+    },
+    "fo:margin-bottom": {
+      "count": 225,
+      "files": 6,
+      "kinds": {
+        "measure": 225
+      },
+      "units": {
+        "in": 225
+      },
+      "events": {
+        "openParagraph": 225
+      },
+      "example": {
+        "v": 0.0555556,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.0555556,
+          "u": "in"
+        },
+        {
+          "v": 0.125,
+          "u": "in"
+        },
+        {
+          "v": 0.0416667,
+          "u": "in"
+        },
+        {
+          "v": 0.0138889,
+          "u": "in"
+        },
+        {
+          "v": 0.0277778,
+          "u": "in"
+        },
+        {
+          "v": 0.138889,
+          "u": "in"
+        },
+        {
+          "v": 0.208333,
+          "u": "in"
+        },
+        {
+          "v": 0.0833333,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:margin-left": {
+      "count": 244,
+      "files": 7,
+      "kinds": {
+        "measure": 244
+      },
+      "units": {
+        "in": 244
+      },
+      "events": {
+        "openParagraph": 244
+      },
+      "example": {
+        "v": 0.25,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.25,
+          "u": "in"
+        },
+        {
+          "v": 0.03125,
+          "u": "in"
+        },
+        {
+          "v": 0.19685,
+          "u": "in"
+        },
+        {
+          "v": 0.119444,
+          "u": "in"
+        },
+        {
+          "v": 0.5,
+          "u": "in"
+        },
+        {
+          "v": 0.375,
+          "u": "in"
+        },
+        {
+          "v": 0.523611,
+          "u": "in"
+        },
+        {
+          "v": 0.0951389,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:margin-right": {
+      "count": 2,
+      "files": 2,
+      "kinds": {
+        "measure": 2
+      },
+      "units": {
+        "in": 2
+      },
+      "events": {
+        "openParagraph": 2
+      },
+      "example": {
+        "v": 1,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 1,
+          "u": "in"
+        },
+        {
+          "v": 0.0208333,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:margin-top": {
+      "count": 38,
+      "files": 2,
+      "kinds": {
+        "measure": 38
+      },
+      "units": {
+        "in": 38
+      },
+      "events": {
+        "openParagraph": 38
+      },
+      "example": {
+        "v": 0.0416667,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.0416667,
+          "u": "in"
+        },
+        {
+          "v": 0.0138889,
+          "u": "in"
+        },
+        {
+          "v": 0.166667,
+          "u": "in"
+        },
+        {
+          "v": 0.0277778,
+          "u": "in"
+        },
+        {
+          "v": 0.0555556,
+          "u": "in"
+        },
+        {
+          "v": 0.0694444,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:padding-bottom": {
+      "count": 196,
+      "files": 22,
+      "kinds": {
+        "measure": 196
+      },
+      "units": {
+        "in": 196
+      },
+      "events": {
+        "startTextObject": 196
+      },
+      "example": {
+        "v": 0.0395833,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.0395833,
+          "u": "in"
+        },
+        {
+          "v": 0,
+          "u": "in"
+        },
+        {
+          "v": 0.04,
+          "u": "in"
+        },
+        {
+          "v": 0.0388889,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:padding-left": {
+      "count": 196,
+      "files": 22,
+      "kinds": {
+        "measure": 196
+      },
+      "units": {
+        "in": 196
+      },
+      "events": {
+        "startTextObject": 196
+      },
+      "example": {
+        "v": 0.0395833,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.0395833,
+          "u": "in"
+        },
+        {
+          "v": 0,
+          "u": "in"
+        },
+        {
+          "v": 0.04,
+          "u": "in"
+        },
+        {
+          "v": 0.0597222,
+          "u": "in"
+        },
+        {
+          "v": 0.0388889,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:padding-right": {
+      "count": 196,
+      "files": 22,
+      "kinds": {
+        "measure": 196
+      },
+      "units": {
+        "in": 196
+      },
+      "events": {
+        "startTextObject": 196
+      },
+      "example": {
+        "v": 0.0395833,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.0395833,
+          "u": "in"
+        },
+        {
+          "v": 0,
+          "u": "in"
+        },
+        {
+          "v": 0.04,
+          "u": "in"
+        },
+        {
+          "v": 0.0388889,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:padding-top": {
+      "count": 196,
+      "files": 22,
+      "kinds": {
+        "measure": 196
+      },
+      "units": {
+        "in": 196
+      },
+      "events": {
+        "startTextObject": 196
+      },
+      "example": {
+        "v": 0.0395833,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.0395833,
+          "u": "in"
+        },
+        {
+          "v": 0,
+          "u": "in"
+        },
+        {
+          "v": 0.04,
+          "u": "in"
+        },
+        {
+          "v": 0.0388889,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:script": {
+      "count": 2,
+      "files": 1,
+      "kinds": {
+        "string": 2
+      },
+      "events": {
+        "openSpan": 2
+      },
+      "example": "Latn",
+      "samples": [
+        "Latn",
+        "Hant"
+      ]
+    },
+    "fo:text-align": {
+      "count": 1306,
+      "files": 24,
+      "kinds": {
+        "string": 1306
+      },
+      "events": {
+        "openParagraph": 1306
+      },
+      "example": "center",
+      "samples": [
+        "center",
+        "left",
+        "right",
+        "justify"
+      ]
+    },
+    "fo:text-indent": {
+      "count": 225,
+      "files": 7,
+      "kinds": {
+        "measure": 225
+      },
+      "units": {
+        "in": 225
+      },
+      "events": {
+        "openParagraph": 225
+      },
+      "example": {
+        "v": -0.25,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": -0.25,
+          "u": "in"
+        },
+        {
+          "v": -0.03125,
+          "u": "in"
+        },
+        {
+          "v": -0.19685,
+          "u": "in"
+        },
+        {
+          "v": -0.119444,
+          "u": "in"
+        },
+        {
+          "v": 1,
+          "u": "in"
+        },
+        {
+          "v": 0.0472222,
+          "u": "in"
+        },
+        {
+          "v": -0.5,
+          "u": "in"
+        },
+        {
+          "v": -0.0951389,
+          "u": "in"
+        }
+      ]
+    },
+    "fo:text-scale": {
+      "count": 1,
+      "files": 1,
+      "kinds": {
+        "measure": 1
+      },
+      "units": {
+        "%": 1
+      },
+      "events": {
+        "openSpan": 1
+      },
+      "example": {
+        "v": 80,
+        "u": "%"
+      }
+    },
+    "fo:text-shadow": {
+      "count": 1,
+      "files": 1,
+      "kinds": {
+        "string": 1
+      },
+      "events": {
+        "openSpan": 1
+      },
+      "example": "1pt 1pt"
+    },
+    "fo:text-transform": {
+      "count": 16,
+      "files": 5,
+      "kinds": {
+        "string": 16
+      },
+      "events": {
+        "openSpan": 16
+      },
+      "example": "uppercase"
+    },
+    "libmspub:shade": {
+      "count": 36,
+      "files": 2,
+      "kinds": {
+        "string": 36
+      },
+      "events": {
+        "setStyle": 36
+      },
+      "example": "normal",
+      "samples": [
+        "normal",
+        "center"
+      ]
+    },
+    "librevenge:category": {
+      "count": 1,
+      "files": 1,
+      "kinds": {
+        "string": 1
+      },
+      "events": {
+        "metaData": 1
+      },
+      "example": "Category"
+    },
+    "librevenge:column": {
+      "count": 330,
+      "files": 7,
+      "kinds": {
+        "measure": 330
+      },
+      "units": {
+        "(generic)": 330
+      },
+      "events": {
+        "openTableCell": 266,
+        "coveredTableCell": 64
+      },
+      "example": {
+        "v": 0,
+        "u": ""
+      },
+      "samples": [
+        {
+          "v": 0,
+          "u": ""
+        },
+        {
+          "v": 1,
+          "u": ""
+        },
+        {
+          "v": 2,
+          "u": ""
+        },
+        {
+          "v": 3,
+          "u": ""
+        },
+        {
+          "v": 4,
+          "u": ""
+        },
+        {
+          "v": 5,
+          "u": ""
+        }
+      ]
+    },
+    "librevenge:mime-type": {
+      "count": 90,
+      "files": 12,
+      "kinds": {
+        "string": 90
+      },
+      "events": {
+        "setStyle": 90
+      },
+      "example": "image/wmf",
+      "samples": [
+        "image/wmf",
+        "image/png",
+        "image/jpeg",
+        "image/bmp",
+        "image/emf"
+      ]
+    },
+    "librevenge:rotate": {
+      "count": 5,
+      "files": 2,
+      "kinds": {
+        "measure": 5
+      },
+      "units": {
+        "(generic)": 3,
+        "in": 2
+      },
+      "events": {
+        "setStyle": 3,
+        "startTextObject": 2
+      },
+      "example": {
+        "v": 90,
+        "u": ""
+      },
+      "samples": [
+        {
+          "v": 90,
+          "u": ""
+        },
+        {
+          "v": -46,
+          "u": "in"
+        }
+      ]
+    },
+    "librevenge:row": {
+      "count": 330,
+      "files": 7,
+      "kinds": {
+        "measure": 330
+      },
+      "units": {
+        "(generic)": 330
+      },
+      "events": {
+        "openTableCell": 266,
+        "coveredTableCell": 64
+      },
+      "example": {
+        "v": 0,
+        "u": ""
+      },
+      "samples": [
+        {
+          "v": 0,
+          "u": ""
+        },
+        {
+          "v": 1,
+          "u": ""
+        },
+        {
+          "v": 2,
+          "u": ""
+        },
+        {
+          "v": 3,
+          "u": ""
+        },
+        {
+          "v": 4,
+          "u": ""
+        },
+        {
+          "v": 5,
+          "u": ""
+        },
+        {
+          "v": 6,
+          "u": ""
+        },
+        {
+          "v": 7,
+          "u": ""
+        }
+      ]
+    },
+    "librevenge:row-height": {
+      "count": 89,
+      "files": 7,
+      "kinds": {
+        "measure": 89
+      },
+      "units": {
+        "in": 89
+      },
+      "events": {
+        "openTableRow": 89
+      },
+      "example": {
+        "v": 0.423005,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.423005,
+          "u": "in"
+        },
+        {
+          "v": 0.423011,
+          "u": "in"
+        },
+        {
+          "v": 0.465477,
+          "u": "in"
+        },
+        {
+          "v": 0.42301,
+          "u": "in"
+        },
+        {
+          "v": 0.423012,
+          "u": "in"
+        },
+        {
+          "v": 0.245833,
+          "u": "in"
+        },
+        {
+          "v": 0.368056,
+          "u": "in"
+        },
+        {
+          "v": 0.358333,
+          "u": "in"
+        }
+      ]
+    },
+    "librevenge:table-columns": {
+      "count": 16,
+      "files": 7,
+      "kinds": {
+        "vector": 16
+      },
+      "events": {
+        "startTableObject": 16
+      },
+      "example": {
+        "length": 2
+      },
+      "samples": [
+        {
+          "length": 2
+        },
+        {
+          "length": 5
+        },
+        {
+          "length": 3
+        },
+        {
+          "length": 2
+        },
+        {
+          "length": 5
+        },
+        {
+          "length": 2
+        },
+        {
+          "length": 5
+        },
+        {
+          "length": 3
+        }
+      ]
+    },
+    "librevenge:table-columns[].style:column-width": {
+      "count": 55,
+      "files": 7,
+      "kinds": {
+        "measure": 55
+      },
+      "units": {
+        "in": 55
+      },
+      "events": {
+        "startTableObject": 55
+      },
+      "example": {
+        "v": 0.8,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.8,
+          "u": "in"
+        },
+        {
+          "v": 0.2,
+          "u": "in"
+        },
+        {
+          "v": 0.304167,
+          "u": "in"
+        },
+        {
+          "v": 1.04167,
+          "u": "in"
+        },
+        {
+          "v": 1,
+          "u": "in"
+        },
+        {
+          "v": 0.544374,
+          "u": "in"
+        },
+        {
+          "v": 0.544376,
+          "u": "in"
+        },
+        {
+          "v": 1.03281,
+          "u": "in"
+        }
+      ]
+    },
+    "meta:creation-date": {
+      "count": 18,
+      "files": 18,
+      "kinds": {
+        "string": 18
+      },
+      "events": {
+        "metaData": 18
+      },
+      "example": "1601-01-01T01:50:16Z",
+      "samples": [
+        "1601-01-01T01:50:16Z",
+        "2008-08-25T19:32:46Z",
+        "2015-06-26T23:32:07Z",
+        "2016-01-13T07:03:21Z",
+        "2015-06-26T23:30:30Z",
+        "2016-01-13T06:42:29Z",
+        "2013-02-08T15:32:35Z",
+        "2013-02-14T06:32:17Z"
+      ]
+    },
+    "meta:initial-creator": {
+      "count": 12,
+      "files": 12,
+      "kinds": {
+        "string": 12
+      },
+      "events": {
+        "metaData": 12
+      },
+      "example": "Author",
+      "samples": [
+        "Author",
+        "RobertWKitsock",
+        "Melissa",
+        "IEUser",
+        "user",
+        "Christine Blumenthal",
+        "Croads",
+        "don Alfonso Capuano"
+      ]
+    },
+    "meta:keyword": {
+      "count": 1,
+      "files": 1,
+      "kinds": {
+        "string": 1
+      },
+      "events": {
+        "metaData": 1
+      },
+      "example": "Keywords"
+    },
+    "style:font-name": {
+      "count": 1516,
+      "files": 23,
+      "kinds": {
+        "string": 1516
+      },
+      "events": {
+        "openSpan": 1516
+      },
+      "example": "Times New Roman",
+      "samples": [
+        "Times New Roman",
+        "Gill Sans MT",
+        "Bodoni MT Condensed",
+        "Gill Sans MT Condensed",
+        "Broadway",
+        "Webdings",
+        "Arial Black",
+        "Franklin Gothic Medium Cond"
+      ]
+    },
+    "style:font-relief": {
+      "count": 2,
+      "files": 1,
+      "kinds": {
+        "string": 2
+      },
+      "events": {
+        "openSpan": 2
+      },
+      "example": "embossed",
+      "samples": [
+        "embossed",
+        "engraved"
+      ]
+    },
+    "style:repeat": {
+      "count": 78,
+      "files": 11,
+      "kinds": {
+        "string": 78
+      },
+      "events": {
+        "setStyle": 78
+      },
+      "example": "stretch"
+    },
+    "style:text-outline": {
+      "count": 1,
+      "files": 1,
+      "kinds": {
+        "string": 1
+      },
+      "events": {
+        "openSpan": 1
+      },
+      "example": "true"
+    },
+    "style:text-position": {
+      "count": 6,
+      "files": 3,
+      "kinds": {
+        "string": 6
+      },
+      "events": {
+        "openSpan": 6
+      },
+      "example": "50% 67%",
+      "samples": [
+        "50% 67%",
+        "-50% 67%"
+      ]
+    },
+    "style:text-underline-mode": {
+      "count": 48,
+      "files": 8,
+      "kinds": {
+        "string": 48
+      },
+      "events": {
+        "openSpan": 48
+      },
+      "example": "continuous",
+      "samples": [
+        "continuous",
+        "skip-white-space"
+      ]
+    },
+    "style:text-underline-style": {
+      "count": 48,
+      "files": 8,
+      "kinds": {
+        "string": 48
+      },
+      "events": {
+        "openSpan": 48
+      },
+      "example": "solid",
+      "samples": [
+        "solid",
+        "dotted",
+        "dash",
+        "long-dash",
+        "dot-dash",
+        "dot-dot-dash",
+        "wave"
+      ]
+    },
+    "style:text-underline-type": {
+      "count": 48,
+      "files": 8,
+      "kinds": {
+        "string": 48
+      },
+      "events": {
+        "openSpan": 48
+      },
+      "example": "single",
+      "samples": [
+        "single",
+        "double"
+      ]
+    },
+    "style:text-underline-width": {
+      "count": 48,
+      "files": 8,
+      "kinds": {
+        "string": 48
+      },
+      "events": {
+        "openSpan": 48
+      },
+      "example": "auto",
+      "samples": [
+        "auto",
+        "bold"
+      ]
+    },
+    "svg:d": {
+      "count": 157,
+      "files": 8,
+      "kinds": {
+        "vector": 157
+      },
+      "events": {
+        "drawPath": 157
+      },
+      "example": {
+        "length": 10
+      },
+      "samples": [
+        {
+          "length": 10
+        },
+        {
+          "length": 10
+        },
+        {
+          "length": 10
+        },
+        {
+          "length": 10
+        },
+        {
+          "length": 10
+        },
+        {
+          "length": 10
+        },
+        {
+          "length": 9
+        },
+        {
+          "length": 10
+        }
+      ]
+    },
+    "svg:d[].librevenge:large-arc": {
+      "count": 15,
+      "files": 3,
+      "kinds": {
+        "measure": 15
+      },
+      "units": {
+        "(generic)": 15
+      },
+      "events": {
+        "drawPath": 15
+      },
+      "example": {
+        "v": 1,
+        "u": ""
+      },
+      "samples": [
+        {
+          "v": 1,
+          "u": ""
+        },
+        {
+          "v": 0,
+          "u": ""
+        }
+      ]
+    },
+    "svg:d[].librevenge:path-action": {
+      "count": 1388,
+      "files": 8,
+      "kinds": {
+        "string": 1388
+      },
+      "events": {
+        "drawPath": 1388
+      },
+      "example": "M",
+      "samples": [
+        "M",
+        "C",
+        "L",
+        "Z",
+        "A"
+      ]
+    },
+    "svg:d[].librevenge:rotate": {
+      "count": 45,
+      "files": 4,
+      "kinds": {
+        "measure": 45
+      },
+      "units": {
+        "in": 45
+      },
+      "events": {
+        "drawPath": 45
+      },
+      "example": {
+        "v": 0,
+        "u": "in"
+      }
+    },
+    "svg:d[].librevenge:sweep": {
+      "count": 15,
+      "files": 3,
+      "kinds": {
+        "measure": 15
+      },
+      "units": {
+        "(generic)": 15
+      },
+      "events": {
+        "drawPath": 15
+      },
+      "example": {
+        "v": 0,
+        "u": ""
+      },
+      "samples": [
+        {
+          "v": 0,
+          "u": ""
+        },
+        {
+          "v": 1,
+          "u": ""
+        }
+      ]
+    },
+    "svg:d[].svg:rx": {
+      "count": 45,
+      "files": 4,
+      "kinds": {
+        "measure": 45
+      },
+      "units": {
+        "in": 45
+      },
+      "events": {
+        "drawPath": 45
+      },
+      "example": {
+        "v": 0.732143,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.732143,
+          "u": "in"
+        },
+        {
+          "v": 0.90625,
+          "u": "in"
+        },
+        {
+          "v": 0.4625,
+          "u": "in"
+        },
+        {
+          "v": 0.5,
+          "u": "in"
+        },
+        {
+          "v": 0.31875,
+          "u": "in"
+        },
+        {
+          "v": 0.375,
+          "u": "in"
+        },
+        {
+          "v": 0.582812,
+          "u": "in"
+        },
+        {
+          "v": 0.291406,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:d[].svg:ry": {
+      "count": 45,
+      "files": 4,
+      "kinds": {
+        "measure": 45
+      },
+      "units": {
+        "in": 45
+      },
+      "events": {
+        "drawPath": 45
+      },
+      "example": {
+        "v": 0.303013,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.303013,
+          "u": "in"
+        },
+        {
+          "v": 0.460938,
+          "u": "in"
+        },
+        {
+          "v": 0.4625,
+          "u": "in"
+        },
+        {
+          "v": 0.261489,
+          "u": "in"
+        },
+        {
+          "v": 0.24375,
+          "u": "in"
+        },
+        {
+          "v": 0.298437,
+          "u": "in"
+        },
+        {
+          "v": 0.271875,
+          "u": "in"
+        },
+        {
+          "v": 0.135937,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:d[].svg:x": {
+      "count": 1237,
+      "files": 8,
+      "kinds": {
+        "measure": 1237
+      },
+      "units": {
+        "in": 1237
+      },
+      "events": {
+        "drawPath": 1237
+      },
+      "example": {
+        "v": 0.760417,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.760417,
+          "u": "in"
+        },
+        {
+          "v": 0.5,
+          "u": "in"
+        },
+        {
+          "v": 7.73958,
+          "u": "in"
+        },
+        {
+          "v": 8,
+          "u": "in"
+        },
+        {
+          "v": 0.928902,
+          "u": "in"
+        },
+        {
+          "v": 0.711111,
+          "u": "in"
+        },
+        {
+          "v": 2.25721,
+          "u": "in"
+        },
+        {
+          "v": 2.475,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:d[].svg:x1": {
+      "count": 340,
+      "files": 6,
+      "kinds": {
+        "measure": 340
+      },
+      "units": {
+        "in": 340
+      },
+      "events": {
+        "drawPath": 340
+      },
+      "example": {
+        "v": 0.630208,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.630208,
+          "u": "in"
+        },
+        {
+          "v": 0.5,
+          "u": "in"
+        },
+        {
+          "v": 7.86979,
+          "u": "in"
+        },
+        {
+          "v": 8,
+          "u": "in"
+        },
+        {
+          "v": 0.820007,
+          "u": "in"
+        },
+        {
+          "v": 0.711111,
+          "u": "in"
+        },
+        {
+          "v": 2.3661,
+          "u": "in"
+        },
+        {
+          "v": 2.475,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:d[].svg:x2": {
+      "count": 340,
+      "files": 6,
+      "kinds": {
+        "measure": 340
+      },
+      "units": {
+        "in": 340
+      },
+      "events": {
+        "drawPath": 340
+      },
+      "example": {
+        "v": 0.5,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.5,
+          "u": "in"
+        },
+        {
+          "v": 0.630208,
+          "u": "in"
+        },
+        {
+          "v": 8,
+          "u": "in"
+        },
+        {
+          "v": 7.86979,
+          "u": "in"
+        },
+        {
+          "v": 0.711111,
+          "u": "in"
+        },
+        {
+          "v": 0.820007,
+          "u": "in"
+        },
+        {
+          "v": 2.475,
+          "u": "in"
+        },
+        {
+          "v": 2.3661,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:d[].svg:y": {
+      "count": 1237,
+      "files": 8,
+      "kinds": {
+        "measure": 1237
+      },
+      "units": {
+        "in": 1237
+      },
+      "events": {
+        "drawPath": 1237
+      },
+      "example": {
+        "v": 0.5,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.5,
+          "u": "in"
+        },
+        {
+          "v": 0.760417,
+          "u": "in"
+        },
+        {
+          "v": 9.19196,
+          "u": "in"
+        },
+        {
+          "v": 9.45238,
+          "u": "in"
+        },
+        {
+          "v": 0.75,
+          "u": "in"
+        },
+        {
+          "v": 0.967791,
+          "u": "in"
+        },
+        {
+          "v": 10.0222,
+          "u": "in"
+        },
+        {
+          "v": 10.24,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:d[].svg:y1": {
+      "count": 340,
+      "files": 6,
+      "kinds": {
+        "measure": 340
+      },
+      "units": {
+        "in": 340
+      },
+      "events": {
+        "drawPath": 340
+      },
+      "example": {
+        "v": 0.5,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.5,
+          "u": "in"
+        },
+        {
+          "v": 9.32217,
+          "u": "in"
+        },
+        {
+          "v": 9.45238,
+          "u": "in"
+        },
+        {
+          "v": 0.630208,
+          "u": "in"
+        },
+        {
+          "v": 0.75,
+          "u": "in"
+        },
+        {
+          "v": 10.1311,
+          "u": "in"
+        },
+        {
+          "v": 10.24,
+          "u": "in"
+        },
+        {
+          "v": 0.858896,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:d[].svg:y2": {
+      "count": 340,
+      "files": 6,
+      "kinds": {
+        "measure": 340
+      },
+      "units": {
+        "in": 340
+      },
+      "events": {
+        "drawPath": 340
+      },
+      "example": {
+        "v": 0.630208,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.630208,
+          "u": "in"
+        },
+        {
+          "v": 9.45238,
+          "u": "in"
+        },
+        {
+          "v": 9.32217,
+          "u": "in"
+        },
+        {
+          "v": 0.5,
+          "u": "in"
+        },
+        {
+          "v": 0.858896,
+          "u": "in"
+        },
+        {
+          "v": 10.24,
+          "u": "in"
+        },
+        {
+          "v": 10.1311,
+          "u": "in"
+        },
+        {
+          "v": 0.75,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:fill-rule": {
+      "count": 280,
+      "files": 14,
+      "kinds": {
+        "string": 280
+      },
+      "events": {
+        "setStyle": 280
+      },
+      "example": "nonzero"
+    },
+    "svg:height": {
+      "count": 270,
+      "files": 26,
+      "kinds": {
+        "measure": 270
+      },
+      "units": {
+        "in": 270
+      },
+      "events": {
+        "startTextObject": 196,
+        "startPage": 58,
+        "startTableObject": 16
+      },
+      "example": {
+        "v": 11,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 11,
+          "u": "in"
+        },
+        {
+          "v": 3.92726,
+          "u": "in"
+        },
+        {
+          "v": 3.9375,
+          "u": "in"
+        },
+        {
+          "v": 1.59375,
+          "u": "in"
+        },
+        {
+          "v": 0.74515,
+          "u": "in"
+        },
+        {
+          "v": 0.914571,
+          "u": "in"
+        },
+        {
+          "v": 0.459339,
+          "u": "in"
+        },
+        {
+          "v": 3.00354,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:linearGradient": {
+      "count": 36,
+      "files": 2,
+      "kinds": {
+        "vector": 36
+      },
+      "events": {
+        "setStyle": 36
+      },
+      "example": {
+        "length": 3
+      },
+      "samples": [
+        {
+          "length": 3
+        },
+        {
+          "length": 3
+        },
+        {
+          "length": 3
+        },
+        {
+          "length": 3
+        },
+        {
+          "length": 3
+        },
+        {
+          "length": 3
+        },
+        {
+          "length": 2
+        },
+        {
+          "length": 2
+        }
+      ]
+    },
+    "svg:linearGradient[].svg:offset": {
+      "count": 72,
+      "files": 2,
+      "kinds": {
+        "measure": 72
+      },
+      "units": {
+        "%": 72
+      },
+      "events": {
+        "setStyle": 72
+      },
+      "example": {
+        "v": 0,
+        "u": "%"
+      },
+      "samples": [
+        {
+          "v": 0,
+          "u": "%"
+        },
+        {
+          "v": 0.5,
+          "u": "%"
+        },
+        {
+          "v": 1,
+          "u": "%"
+        }
+      ]
+    },
+    "svg:linearGradient[].svg:stop-color": {
+      "count": 72,
+      "files": 2,
+      "kinds": {
+        "string": 72
+      },
+      "events": {
+        "setStyle": 72
+      },
+      "example": "#8064a2",
+      "samples": [
+        "#8064a2",
+        "#5b4773",
+        "#1f497d",
+        "#8db3e2",
+        "#365f91",
+        "#95b3d7",
+        "#ffffff",
+        "#aaaaaa"
+      ]
+    },
+    "svg:linearGradient[].svg:stop-opacity": {
+      "count": 72,
+      "files": 2,
+      "kinds": {
+        "measure": 72
+      },
+      "units": {
+        "%": 72
+      },
+      "events": {
+        "setStyle": 72
+      },
+      "example": {
+        "v": 1,
+        "u": "%"
+      }
+    },
+    "svg:points": {
+      "count": 244,
+      "files": 14,
+      "kinds": {
+        "vector": 244
+      },
+      "events": {
+        "drawPolygon": 244
+      },
+      "example": {
+        "length": 5
+      },
+      "samples": [
+        {
+          "length": 5
+        },
+        {
+          "length": 5
+        },
+        {
+          "length": 5
+        },
+        {
+          "length": 5
+        },
+        {
+          "length": 5
+        },
+        {
+          "length": 5
+        },
+        {
+          "length": 5
+        },
+        {
+          "length": 33
+        }
+      ]
+    },
+    "svg:points[].svg:x": {
+      "count": 1485,
+      "files": 14,
+      "kinds": {
+        "measure": 1485
+      },
+      "units": {
+        "in": 1485
+      },
+      "events": {
+        "drawPolygon": 1485
+      },
+      "example": {
+        "v": 4.5,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 4.5,
+          "u": "in"
+        },
+        {
+          "v": 5.75,
+          "u": "in"
+        },
+        {
+          "v": 0.9375,
+          "u": "in"
+        },
+        {
+          "v": 1.55578,
+          "u": "in"
+        },
+        {
+          "v": 0.6875,
+          "u": "in"
+        },
+        {
+          "v": 2.37301,
+          "u": "in"
+        },
+        {
+          "v": 1.52786,
+          "u": "in"
+        },
+        {
+          "v": 2.5,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:points[].svg:y": {
+      "count": 1485,
+      "files": 14,
+      "kinds": {
+        "measure": 1485
+      },
+      "units": {
+        "in": 1485
+      },
+      "events": {
+        "drawPolygon": 1485
+      },
+      "example": {
+        "v": 4.3125,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 4.3125,
+          "u": "in"
+        },
+        {
+          "v": 5.56836,
+          "u": "in"
+        },
+        {
+          "v": 1,
+          "u": "in"
+        },
+        {
+          "v": 1.625,
+          "u": "in"
+        },
+        {
+          "v": 1.5625,
+          "u": "in"
+        },
+        {
+          "v": 3,
+          "u": "in"
+        },
+        {
+          "v": 8.22506,
+          "u": "in"
+        },
+        {
+          "v": 9.61966,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:stroke-color": {
+      "count": 167,
+      "files": 10,
+      "kinds": {
+        "string": 167
+      },
+      "events": {
+        "setStyle": 167
+      },
+      "example": "#ffcc00",
+      "samples": [
+        "#ffcc00",
+        "#000000",
+        "#8064a2",
+        "#4f81bd",
+        "#b8cce4",
+        "#000066",
+        "#ffffff",
+        "#000080"
+      ]
+    },
+    "svg:stroke-linecap": {
+      "count": 6,
+      "files": 1,
+      "kinds": {
+        "string": 6
+      },
+      "events": {
+        "setStyle": 6
+      },
+      "example": "butt"
+    },
+    "svg:stroke-width": {
+      "count": 167,
+      "files": 10,
+      "kinds": {
+        "measure": 167
+      },
+      "units": {
+        "in": 167
+      },
+      "events": {
+        "setStyle": 167
+      },
+      "example": {
+        "v": 0.03125,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 0.03125,
+          "u": "in"
+        },
+        {
+          "v": 0,
+          "u": "in"
+        },
+        {
+          "v": 0.0277778,
+          "u": "in"
+        },
+        {
+          "v": 0.0138889,
+          "u": "in"
+        },
+        {
+          "v": 0.00986111,
+          "u": "in"
+        },
+        {
+          "v": 0.0115278,
+          "u": "in"
+        },
+        {
+          "v": 0.0208333,
+          "u": "in"
+        },
+        {
+          "v": 0.0166667,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:width": {
+      "count": 270,
+      "files": 26,
+      "kinds": {
+        "measure": 270
+      },
+      "units": {
+        "in": 270
+      },
+      "events": {
+        "startTextObject": 196,
+        "startPage": 58,
+        "startTableObject": 16
+      },
+      "example": {
+        "v": 8.5,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 8.5,
+          "u": "in"
+        },
+        {
+          "v": 1.775,
+          "u": "in"
+        },
+        {
+          "v": 5.525,
+          "u": "in"
+        },
+        {
+          "v": 1,
+          "u": "in"
+        },
+        {
+          "v": 1.52083,
+          "u": "in"
+        },
+        {
+          "v": 5.375,
+          "u": "in"
+        },
+        {
+          "v": 2.5,
+          "u": "in"
+        },
+        {
+          "v": 2.4375,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:x": {
+      "count": 212,
+      "files": 24,
+      "kinds": {
+        "measure": 212
+      },
+      "units": {
+        "in": 212
+      },
+      "events": {
+        "startTextObject": 196,
+        "startTableObject": 16
+      },
+      "example": {
+        "v": 6.125,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 6.125,
+          "u": "in"
+        },
+        {
+          "v": 2.375,
+          "u": "in"
+        },
+        {
+          "v": 4.25,
+          "u": "in"
+        },
+        {
+          "v": 0.916667,
+          "u": "in"
+        },
+        {
+          "v": 2.625,
+          "u": "in"
+        },
+        {
+          "v": 5.5,
+          "u": "in"
+        },
+        {
+          "v": 0.662549,
+          "u": "in"
+        },
+        {
+          "v": 0.864583,
+          "u": "in"
+        }
+      ]
+    },
+    "svg:y": {
+      "count": 212,
+      "files": 24,
+      "kinds": {
+        "measure": 212
+      },
+      "units": {
+        "in": 212
+      },
+      "events": {
+        "startTextObject": 196,
+        "startTableObject": 16
+      },
+      "example": {
+        "v": 3.35417,
+        "u": "in"
+      },
+      "samples": [
+        {
+          "v": 3.35417,
+          "u": "in"
+        },
+        {
+          "v": 3.3125,
+          "u": "in"
+        },
+        {
+          "v": 8.375,
+          "u": "in"
+        },
+        {
+          "v": 5.56836,
+          "u": "in"
+        },
+        {
+          "v": 2.4396,
+          "u": "in"
+        },
+        {
+          "v": 5.85417,
+          "u": "in"
+        },
+        {
+          "v": 6.31351,
+          "u": "in"
+        },
+        {
+          "v": 7.5,
+          "u": "in"
+        }
+      ]
+    },
+    "table:number-columns-spanned": {
+      "count": 6,
+      "files": 4,
+      "kinds": {
+        "measure": 6
+      },
+      "units": {
+        "(generic)": 6
+      },
+      "events": {
+        "openTableCell": 6
+      },
+      "example": {
+        "v": 5,
+        "u": ""
+      },
+      "samples": [
+        {
+          "v": 5,
+          "u": ""
+        },
+        {
+          "v": 3,
+          "u": ""
+        },
+        {
+          "v": 2,
+          "u": ""
+        }
+      ]
+    },
+    "table:number-rows-spanned": {
+      "count": 26,
+      "files": 2,
+      "kinds": {
+        "measure": 26
+      },
+      "units": {
+        "(generic)": 26
+      },
+      "events": {
+        "openTableCell": 26
+      },
+      "example": {
+        "v": 4,
+        "u": ""
+      },
+      "samples": [
+        {
+          "v": 4,
+          "u": ""
+        },
+        {
+          "v": 2,
+          "u": ""
+        },
+        {
+          "v": 3,
+          "u": ""
+        },
+        {
+          "v": 6,
+          "u": ""
+        }
+      ]
+    }
+  }
+}

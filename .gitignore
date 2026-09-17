@@ -1,0 +1,9 @@
+node_modules/
+bin/
+dist/
+.next/
+wasm/build/
+wasm/dist/*.wasm
+*.log
+.DS_Store
+/tmp/

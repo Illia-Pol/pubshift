@@ -1,0 +1,20 @@
+{
+  "name": "pubshift",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build:native": "./native/build.sh",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev": "npm run dev -w @pubshift/web",
+    "fidelity": "node tools/fidelity/run.mjs",
+    "fidelity:test": "node tools/fidelity/test.mjs"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true
+  }
+}

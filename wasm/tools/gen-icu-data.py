@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+"""Generates wasm/icu_shim_data.inc from real ICU.
+
+The shim's whole claim is that it reproduces ICU's answers rather than
+approximating them, so the tables are not transcribed by hand from standards
+documents — they are dumped out of the same ICU the native extractor links
+against, and this script turns the dump into C++.
+
+Run it only when the ICU the native oracle links against changes. The generated
+.inc is committed, so a normal build needs neither ICU nor this script.
+
+Usage:
+    python3 tools/gen-icu-data.py <icu-truth.txt> <lcid-truth.txt> <out.inc>
+
+The two inputs come from the probes documented in README.md ("Regenerating the
+tables"). They must be produced with the SAME icu4c the native build uses,
+otherwise the shim will faithfully reproduce the wrong ICU.
+"""
+
+import collections
+import sys
+
+SBCS = [
+    ("windows-1250", "WIN1250"),
+    ("windows-1251", "WIN1251"),
+    ("windows-1252", "WIN1252"),
+    ("windows-1256", "WIN1256"),
+    ("ISO-8859-1", "LATIN1"),
+    ("ISO-8859-2", "LATIN2"),
+]
+
+
+def load_icu_truth(path):
+    rows = collections.defaultdict(dict)
+    for line in open(path):
+        line = line.rstrip("\n")
+        if not line or line.startswith("LABEL"):
+            continue
+        p = line.split("|")
+        rows[p[0]][p[1]] = p[4].split("=", 1)[1]
+    return rows
+
+
+def emit_sbcs(rows, out):
+    for enc, name in SBCS:
+        table = rows.get(enc)
+        if not table:
+            sys.exit(f"missing {enc} in ICU truth dump")
+        # The shim only stores 0x80-0xFF, so the identity of the low half is a
+        # precondition, not an assumption. Check it.
+        for b in range(0x80):
+            got = table[f"byte{b:02x}"]
+            if got != f"{b:X}":
+                sys.exit(f"{enc}: byte {b:#04x} is not identity (ICU says {got})")
+        vals = []
+        for b in range(0x80, 0x100):
+            v = table[f"byte{b:02x}"]
+            if "," in v:
+                sys.exit(f"{enc}: byte {b:#04x} decodes to more than one code point")
+            iv = int(v, 16)
+            if iv > 0xFFFF:
+                sys.exit(f"{enc}: byte {b:#04x} decodes above the BMP")
+            vals.append(iv)
+        out.append(f"// {enc}: bytes 0x80-0xFF. 0x00-0x7F is identity (checked at generation).")
+        out.append(f"static const uint16_t k{name}[128] = {{")
+        for i in range(0, 128, 8):
+            out.append("  " + " ".join(f"0x{v:04X}," for v in vals[i:i + 8]))
+        out.append("};")
+        out.append("")
+
+
+def emit_lcid(path, out):
+    ent = {}
+    locale_of = {}
+    for line in open(path):
+        p = line.rstrip("\n").split("|")
+        lcid = int(p[0], 16)
+        ent[lcid] = p[1]
+        locale_of[lcid] = p[1]
+
+    # ICU answers for an LCID iff it answers for its primary language id
+    # (the low 10 bits). Verified here rather than assumed: if this ever stops
+    # holding, generation fails loudly instead of shipping a wrong table.
+    for lcid in range(0x10000):
+        if (lcid in ent) != ((lcid & 0x3FF) in ent):
+            sys.exit(f"LCID {lcid:#06x}: membership no longer follows the primary id")
+
+    locales = sorted(set(ent.values()))
+    index = {loc: i for i, loc in enumerate(locales)}
+
+    primary = [0xFFFF] * 1024
+    for p in range(1024):
+        if p in ent:
+            primary[p] = index[ent[p]]
+
+    exceptions = []
+    for lcid in sorted(ent):
+        p = lcid & 0x3FF
+        if primary[p] != index[ent[lcid]]:
+            exceptions.append((lcid, index[ent[lcid]]))
+
+    if len(locales) > 0xFFFF:
+        sys.exit("too many distinct locales for a uint16 index")
+
+    out.append(f"// {len(ent)} LCIDs, {len(locales)} distinct locale ids, "
+               f"{len(exceptions)} that differ from their primary language id.")
+    out.append(f"static const char *const kLocales[{len(locales)}] = {{")
+    for i in range(0, len(locales), 4):
+        out.append("  " + " ".join(f'"{l}",' for l in locales[i:i + 4]))
+    out.append("};")
+    out.append("")
+    out.append("// Indexed by lcid & 0x3FF. 0xFFFF means ICU reports no locale.")
+    out.append("static const uint16_t kLcidPrimary[1024] = {")
+    for i in range(0, 1024, 12):
+        out.append("  " + " ".join(f"0x{v:04X}," for v in primary[i:i + 12]))
+    out.append("};")
+    out.append("")
+    out.append("struct LcidException { uint16_t lcid; uint16_t locale; };")
+    out.append(f"// Sorted by lcid; binary searched.")
+    out.append(f"static const LcidException kLcidExceptions[{len(exceptions)}] = {{")
+    for i in range(0, len(exceptions), 6):
+        chunk = exceptions[i:i + 6]
+        out.append("  " + " ".join(f"{{0x{l:04X},{x}}}," for l, x in chunk))
+    out.append("};")
+    out.append("")
+
+
+def main():
+    if len(sys.argv) != 4:
+        sys.exit(__doc__)
+    icu_truth, lcid_truth, dest = sys.argv[1:]
+    rows = load_icu_truth(icu_truth)
+    out = [
+        "// GENERATED by tools/gen-icu-data.py from a real-ICU dump. Do not edit.",
+        "// Regenerate with the probes described in README.md.",
+        "",
+    ]
+    emit_sbcs(rows, out)
+    emit_lcid(lcid_truth, out)
+    open(dest, "w").write("\n".join(out) + "\n")
+    print(f"wrote {dest}")
+
+
+if __name__ == "__main__":
+    main()
