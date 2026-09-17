@@ -94,8 +94,12 @@ std::string buildSuccess(const JsonCollector &collector)
 
 std::string runExtract(const unsigned char *data, unsigned long len)
 {
-  if (!data || len == 0)
-    return buildFailure("NO_INPUT", "The file is empty.");
+  /* An empty file gets no special case on purpose. The native extractor hands
+   * a zero-byte file to the same isSupported() check and reports UNSUPPORTED,
+   * so answering NO_INPUT here would be a nicer message and a divergence —
+   * and the corpus cannot catch it, since every file in it has bytes. */
+  static const unsigned char kNothing[1] = {0};
+  if (!data) { data = kNothing; len = 0; }
 
   /* RVNGStringStream copies the buffer. That is one extra copy of the document,
    * which for the sizes Publisher files come in is a better trade than teaching

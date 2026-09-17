@@ -50,3 +50,19 @@ node tools/fidelity/run.mjs
 ## Licence
 
 Pubshift is MPL-2.0, matching libmspub, which does the format parsing and deserves the credit.
+
+`pubshift.wasm` ships libmspub and librevenge compiled in, which is distribution in Executable
+Form. MPL-2.0 §3.2(a) then requires the corresponding source to be available and recipients to be
+told how to get it, so:
+
+- [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) lists every component in the binary, generated
+  from [`wasm/third-party.json`](wasm/third-party.json), which pins each upstream by commit hash or
+  digest.
+- `npm run licence:verify` fails if `third_party/` has drifted from that pin — a source offer that
+  points at code you did not compile is not an offer.
+- `npm run licence:offer` builds the corresponding-source archive to publish alongside the binary.
+- The deployed site carries the licence texts at `/licences/` and a `/credits` page, linked from
+  every page's footer, naming the Document Liberation Project and stating the SHA-256 of the exact
+  binary served.
+
+See [`docs/DEPLOY.md`](docs/DEPLOY.md) §7 for the one step that is not automated.

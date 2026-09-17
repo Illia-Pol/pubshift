@@ -20,6 +20,7 @@ export {
 
 export { buildDoc } from './model/build';
 export { assess, type Assessment, type Verdict } from './model/assess';
+export { recommendFormat, type Recommendation } from './model/recommend';
 export type {
   Asset, Doc, DocMeta, Element, Fill, Geometry, Group, GradientStop, Image, Page,
   Paragraph, PathCommand, Point, Run, Shadow, Shape, ShapeStyle, Stroke, Table,

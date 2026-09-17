@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pubshift wasm — browser check</title>
+<style>
+  body { font: 14px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; margin: 2rem; max-width: 60rem; }
+  h1 { font-size: 1.1rem; }
+  .ok { color: #0a7d32; } .bad { color: #b3261e; } .note { color: #666; }
+  pre { white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<h1>pubshift wasm — browser check</h1>
+<p class="note">
+  Runs the shipped module and the ICU shim in this browser. It exists because
+  node's TextDecoder is ICU-backed while a browser's follows the WHATWG Encoding
+  spec — so the delegated CJK encodings have to be measured here, not inferred
+  from a node run. Results are also written to <code>window.__pubshiftCheck</code>.
+</p>
+<pre id="out">running…</pre>
+<script type="module">
+const out = document.getElementById('out');
+const lines = [];
+const log = (s, cls) => {
+  lines.push(s);
+  const el = document.createElement('div');
+  if (cls) el.className = cls;
+  el.textContent = s;
+  if (out.textContent === 'running…') out.textContent = '';
+  out.appendChild(el);
+};
+
+const result = { groups: [], userAgent: navigator.userAgent };
+
+try {
+  const createShimProbe = (await import('./build/shim-probe.mjs')).default;
+  const m = await createShimProbe();
+  const fixtures = await (await fetch('./fixtures/icu-converters.json')).json();
+
+  const decode = (enc, hex) => {
+    const bytes = hex.length ? Uint8Array.from(hex.match(/../g).map(h => parseInt(h, 16))) : new Uint8Array(0);
+    const cap = Math.max(16, bytes.length * 2 + 8);
+    const encLen = enc.length * 4 + 1;
+    const encPtr = m._malloc(encLen);
+    const bufPtr = m._malloc(Math.max(1, bytes.length));
+    const outPtr = m._malloc(cap * 4);
+    try {
+      m.stringToUTF8(enc, encPtr, encLen);
+      m.HEAPU8.set(bytes, bufPtr);
+      const n = m._probe_decode(encPtr, bufPtr, bytes.length, outPtr, cap);
+      if (n < 0) return null;
+      const r = [];
+      for (let i = 0; i < n; i++) r.push(m.HEAPU32[(outPtr >>> 2) + i]);
+      return r;
+    } finally { m._free(outPtr); m._free(bufPtr); m._free(encPtr); }
+  };
+
+  const byEnc = new Map();
+  for (const c of fixtures.cases) {
+    if (!byEnc.has(c.enc)) byEnc.set(c.enc, []);
+    byEnc.get(c.enc).push(c);
+  }
+
+  for (const [enc, cases] of byEnc) {
+    let same = 0;
+    const diffs = [];
+    for (const c of cases) {
+      const got = decode(enc, c.in);
+      if (got && got.length === c.out.length && got.every((v, i) => v === c.out[i])) same++;
+      else if (diffs.length < 6) {
+        diffs.push(`${c.case} in=${c.in.slice(0, 20)} icu=[${(c.out || []).map(x => x.toString(16))}] browser=[${(got || []).map(x => x.toString(16))}]`);
+      }
+    }
+    const bad = cases.length - same;
+    result.groups.push({ enc, total: cases.length, same, diffs });
+    log(`${bad === 0 ? 'ok  ' : 'diff'} ${enc.padEnd(14)} ${same}/${cases.length} match real ICU`, bad === 0 ? 'ok' : 'bad');
+    for (const d of diffs) log(`       ${d}`, 'note');
+  }
+
+  // TextDecoder labels this browser supports, since the CJK path depends on them.
+  const labels = {};
+  for (const l of ['shift_jis', 'gbk', 'big5', 'gb18030']) {
+    try { new TextDecoder(l); labels[l] = true; } catch { labels[l] = false; }
+  }
+  result.labels = labels;
+  log(`TextDecoder labels: ${Object.entries(labels).map(([k, v]) => `${k}=${v}`).join(' ')}`);
+
+  // And the shipped module itself, on a real file, to prove the whole path works
+  // in a browser and not only under node.
+  try {
+    const { loadPubshift } = await import('../index.mjs');
+    const pubshift = await loadPubshift();
+    const bytes = new Uint8Array(await (await fetch('../../packages/core/test/corpus/tables.pub')).arrayBuffer());
+    const t0 = performance.now();
+    const json = pubshift.extractJSON(bytes);
+    const ms = performance.now() - t0;
+    result.sample = { bytes: bytes.length, jsonBytes: json.length, ms, sha: await sha256(json) };
+    log(`sample: ${bytes.length} B in -> ${json.length} B of IR in ${ms.toFixed(1)} ms  sha256=${result.sample.sha.slice(0, 16)}`);
+  } catch (err) {
+    result.sampleError = String(err);
+    log(`sample: skipped (${err})`, 'note');
+  }
+
+  result.ok = result.groups.every(g => g.same === g.total || g.enc === 'windows-936' || g.enc === 'windows-932');
+} catch (err) {
+  result.fatal = String(err);
+  log(`FATAL ${err}`, 'bad');
+}
+
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+window.__pubshiftCheck = result;
+window.__pubshiftDone = true;
+</script>
+</body>
+</html>

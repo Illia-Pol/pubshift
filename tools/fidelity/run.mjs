@@ -14,7 +14,7 @@
 //   --filter STR  only corpus files whose name contains STR
 //   --quiet       summary only, no per-file rows
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -42,6 +42,62 @@ const filter = opt('--filter', null);
 function pad(s, n, right = false) {
   s = String(s);
   return right ? s.padStart(n) : s.padEnd(n);
+}
+
+/**
+ * The last fidelity measurement, if one has been made.
+ *
+ * This file does not run compare.mjs — that takes minutes and shells out to LibreOffice,
+ * and this harness is meant to stay fast enough to run on every change. It reads the
+ * artefact and, crucially, says when the artefact is older than the emitters it claims to
+ * have measured. A stale fidelity score presented as current is worse than none.
+ */
+function readFidelity() {
+  const path = join(HERE, 'fidelity.json');
+  if (!existsSync(path)) {
+    return { present: false, reason: 'never measured — run `node tools/fidelity/compare.mjs`' };
+  }
+  let report;
+  try {
+    report = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (e) {
+    return { present: false, reason: `fidelity.json is unreadable: ${e.message}` };
+  }
+
+  const emitDir = join(ROOT, 'packages/core/src/emit');
+  let newestEmitter = 0;
+  let newestName = null;
+  if (existsSync(emitDir)) {
+    for (const n of readdirSync(emitDir)) {
+      const m = statSync(join(emitDir, n)).mtimeMs;
+      if (m > newestEmitter) {
+        newestEmitter = m;
+        newestName = n;
+      }
+    }
+  }
+  const measuredAt = Date.parse(report.generatedAt ?? '') || 0;
+  return {
+    present: true,
+    path,
+    generatedAt: report.generatedAt,
+    ageMs: Date.now() - measuredAt,
+    stale: newestEmitter > measuredAt,
+    staleBecause: newestEmitter > measuredAt ? newestName : null,
+    overall: report.totals?.overall ?? null,
+    flagship: report.totals?.flagship ?? null,
+    scored: report.totals?.scored ?? 0,
+    skippedEmpty: report.totals?.skippedEmpty ?? 0,
+    byFormat: report.byFormat ?? {},
+  };
+}
+
+function humanAge(ms) {
+  const m = Math.round(ms / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  return h < 48 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
 }
 const kb = (b) => (b / 1024).toFixed(0);
 /** First sentence of a reason string — `Fill.image has ...` must not truncate at `Fill`. */
@@ -114,6 +170,7 @@ function run() {
   const handled = JSON.parse(readFileSync(join(HERE, 'handled.json'), 'utf8'));
   const coverage = checkCoverage(finalized, handled);
   const raster = detectRasteriser();
+  const fidelity = readFidelity();
 
   const totals = {
     files: rows.length,
@@ -151,8 +208,9 @@ function run() {
       knownLosses: coverage.knownLosses,
     },
     renderDiff: raster.available
-      ? { pixel: 'available', engine: raster.engine, version: raster.version }
+      ? { pixel: 'available', engine: raster.engine, version: raster.version, pdfRasteriser: raster.pdfRasteriser }
       : { pixel: 'unavailable', reason: raster.reason, fallback: 'structural signature comparison' },
+    fidelity,
     files: rows,
   };
 
@@ -166,14 +224,14 @@ function run() {
   if (asJson) {
     console.log(JSON.stringify(report, null, 2));
   } else {
-    printSummary(report, coverage, finalized, raster);
+    printSummary(report, coverage, finalized, raster, fidelity);
   }
 
   const gateFails = !coverage.pass || totals.unexpectedFailures.length > 0 || totals.missingExpectedFailures.length > 0;
   return flag('--no-gate') ? 0 : gateFails ? 1 : 0;
 }
 
-function printSummary(report, coverage, profile, raster) {
+function printSummary(report, coverage, profile, raster, fidelity) {
   const t = report.totals;
   console.log('');
   console.log(
@@ -241,9 +299,34 @@ function printSummary(report, coverage, profile, raster) {
   console.log('');
   console.log(
     raster.available
-      ? `render diff  pixel comparison available (${raster.engine} ${raster.version})`
+      ? `render diff  pixel comparison available (${raster.engine} ${raster.version} -> ${raster.pdfRasteriser})`
       : `render diff  PIXEL COMPARISON UNAVAILABLE — ${raster.reason}\n             falling back to structural signatures (element counts, path mix, text, colours, bbox)`,
   );
+
+  // Conversion quality, from the last `node tools/fidelity/compare.mjs`. Coverage above
+  // asks "did we notice every feature"; this asks "does the output look like the original",
+  // and a run can pass the first while failing the second.
+  if (!fidelity.present) {
+    console.log(`fidelity     ${fidelity.reason}`);
+  } else {
+    const cells = Object.entries(fidelity.byFormat)
+      .map(([f, s]) =>
+        s.filesScored ? `${f.toUpperCase()} ${s.score.toFixed(3)}` : `${f.toUpperCase()} ${s.available ? 'none scored' : 'absent'}`,
+      )
+      .join('  ·  ');
+    console.log(
+      `fidelity     ${cells}` +
+        `\n             overall ${fidelity.overall?.toFixed(3) ?? '—'} over ${fidelity.scored} files` +
+        `, ${fidelity.skippedEmpty} skipped as 'empty' (upstream parser gap, not a conversion failure)` +
+        `\n             ink agreement against LibreOffice's own render of each .pub, measured ${humanAge(fidelity.ageMs)}`,
+    );
+    if (fidelity.stale) {
+      console.log(
+        `             STALE: ${fidelity.staleBecause} has changed since — re-run \`node tools/fidelity/compare.mjs\``,
+      );
+    }
+  }
+
   const suffix = filter ? '.filtered' : '';
   console.log(`\nwrote        ${join(HERE, `report${suffix}.json`)}\n             ${join(HERE, `profile${suffix}.json`)}`);
   console.log(

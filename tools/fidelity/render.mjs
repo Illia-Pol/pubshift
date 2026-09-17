@@ -1,116 +1,182 @@
 #!/usr/bin/env node
-// Render diff for SVG output.
+// Rendering and comparing pages.
 //
-// Two modes. Pixel mode rasterises both SVGs in a headless browser and reports the
-// fraction of differing pixels; it needs Playwright, which is NOT installed here and
-// which this tool will never install for you. Structural mode needs nothing, works
-// today, and is what actually runs: it compares element counts, path command mix,
-// text, colour histograms and the composed bounding box.
+// Two modes, and the important one is now real. PIXEL mode rasterises documents through
+// LibreOffice — which opens .pub, .pptx, .docx, .svg and .pdf, so the same engine draws
+// both the original and our conversion of it — and scores the two images against each
+// other. STRUCTURAL mode parses SVG markup and compares element counts, path command mix,
+// text, colour histograms and the composed bounding box; it needs no external tool and is
+// what still runs for SVG-to-SVG work and for baselines.
 //
-// Structural mode is not a substitute for pixel mode — it cannot see a glyph shifted
-// by 2pt — but it does catch the failures that matter early: dropped elements, lost
-// text, collapsed geometry, wrong colours, a page laid out at the wrong scale.
+// Structural mode cannot see a glyph shifted by 2pt, which is why it was never enough on
+// its own. Pixel mode cannot see that the shifted glyph is still selectable text, which is
+// why structural mode did not go away. Every result says which mode produced it, so a green
+// run can never be mistaken for a pixel-verified one.
+//
+//   node tools/fidelity/render.mjs a.svg b.svg          # compare two SVGs
+//   node tools/fidelity/render.mjs --render f.pub -o d  # rasterise every page to PNG
+//   node tools/fidelity/render.mjs --png a.png b.png    # score two renders, write a diff
+//   node tools/fidelity/render.mjs --check              # what the rasteriser can do here
 
-import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { basename } from 'node:path';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, extname, join, resolve } from 'node:path';
+
+import { decodePNG, encodePNG } from './lib/png.mjs';
+import { comparePixels as comparePixelBuffers, countInk, describeMetric, THRESHOLDS } from './lib/pixel.mjs';
+import {
+  convert,
+  detectPdftoppm,
+  detectSoffice,
+  rasterisePDF,
+  DEFAULT_DPI,
+  DEFAULT_TIMEOUT_MS,
+} from './lib/soffice.mjs';
 
 // ---------------------------------------------------------------- rasteriser
 
+/** What LibreOffice will open for us. Anything else has to be converted first. */
+const RENDERABLE = new Set(['.pub', '.pptx', '.ppt', '.docx', '.doc', '.odp', '.odt', '.odg', '.svg', '.rtf', '.pdf']);
+
 let _rasteriser = null;
 
-/** Probes for Playwright without ever triggering an install. */
+/**
+ * Whether a real pixel comparison is possible here, and with what.
+ *
+ * `available` means LibreOffice can turn a document into a PDF. `pdfRasteriser` names what
+ * turns that PDF into one PNG per page — poppler if it is installed, LibreOffice re-importing
+ * its own PDF if it is not. The distinction matters: the fallback re-interprets the PDF
+ * through Draw's importer instead of rendering it, so its output is not comparable with
+ * poppler's and a run must not mix the two.
+ */
 export function detectRasteriser() {
   if (_rasteriser) return _rasteriser;
-  const probe = spawnSync('npx', ['--no-install', 'playwright', '--version'], {
-    encoding: 'utf8',
-    timeout: 30000,
-  });
-  const out = `${probe.stdout ?? ''}${probe.stderr ?? ''}`;
-  const version = /Version (\d+\.\d+\.\d+)/.exec(out)?.[1] ?? /playwright[ @v]*(\d+\.\d+\.\d+)/i.exec(out)?.[1];
-  if (probe.status === 0 && version) {
-    _rasteriser = { available: true, engine: 'playwright', version };
-  } else {
-    _rasteriser = {
-      available: false,
-      engine: null,
-      reason:
-        probe.error?.message ??
-        'playwright is not installed in this workspace (probed with `npx --no-install playwright --version`)',
-    };
+  const lo = detectSoffice();
+  if (!lo.available) {
+    _rasteriser = { available: false, engine: null, version: null, reason: lo.reason };
+    return _rasteriser;
   }
+  const poppler = detectPdftoppm();
+  _rasteriser = {
+    available: true,
+    engine: 'libreoffice',
+    version: lo.version,
+    bin: lo.bin,
+    pdfRasteriser: poppler.available ? `pdftoppm ${poppler.version}` : 'libreoffice-reimport',
+    ...(poppler.available ? {} : { note: `poppler absent (${poppler.reason}); falling back to LibreOffice PDF re-import` }),
+  };
   return _rasteriser;
 }
 
 /**
- * Rasterises an SVG string to a PNG buffer. Returns null when no rasteriser is
- * available — callers fall back to structural comparison.
+ * Every page of a document, as PNG files on disk.
+ *
+ * `.pdf` skips straight to rasterisation; `.png` is passed through as a one-page render, so
+ * a caller can feed it something already rasterised. Everything else goes through
+ * LibreOffice to PDF first, because `--convert-to png` silently renders only page one.
+ *
+ * @param {string} input absolute or cwd-relative path
+ * @param {{dpi?:number, outDir?:string, timeoutMs?:number}} [opts]
+ * @returns {Promise<{ok:boolean, pages?:string[], via?:string, ms:number, reason?:string, outDir?:string}>}
  */
-export async function rasterise(svg, { width = 816, height = 1056, deviceScaleFactor = 1 } = {}) {
-  const r = detectRasteriser();
-  if (!r.available) return null;
-  const { chromium } = await import('playwright');
-  const browser = await chromium.launch();
+export async function renderToPNG(input, { dpi = DEFAULT_DPI, outDir, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  const t0 = Date.now();
+  const src = resolve(input);
+  const ext = extname(src).toLowerCase();
+  const dir = outDir ? resolve(outDir) : mkdtempSync(join(tmpdir(), 'pubshift-render-'));
+  mkdirSync(dir, { recursive: true });
+
+  if (ext === '.png') return { ok: true, pages: [src], via: 'passthrough', ms: Date.now() - t0, outDir: dir };
+
+  if (!RENDERABLE.has(ext)) {
+    return { ok: false, ms: Date.now() - t0, reason: `no renderer for ${ext || 'a file with no extension'}`, outDir: dir };
+  }
+
+  let pdf = src;
+  let converted = null;
+  if (ext !== '.pdf') {
+    converted = await convert(src, 'pdf', join(dir, 'pdf'), { timeoutMs });
+    if (!converted.ok) return { ok: false, ms: Date.now() - t0, reason: converted.reason, outDir: dir };
+    pdf = converted.path;
+  }
+
+  const raster = await rasterisePDF(pdf, join(dir, 'png'), { dpi, timeoutMs });
+  if (!raster.ok) return { ok: false, ms: Date.now() - t0, reason: raster.reason, outDir: dir };
+
+  return {
+    ok: true,
+    pages: raster.pages,
+    pdf,
+    via: converted ? `libreoffice -> ${raster.via}` : raster.via,
+    dpi,
+    ms: Date.now() - t0,
+    outDir: dir,
+  };
+}
+
+/**
+ * Rasterises an SVG string to a PNG buffer — page one, since one SVG is one page.
+ * Returns null when no rasteriser is available, so callers can fall back to structure.
+ */
+export async function rasterise(svg, { dpi = DEFAULT_DPI, timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+  if (!detectRasteriser().available) return null;
+  const dir = mkdtempSync(join(tmpdir(), 'pubshift-svg-'));
   try {
-    const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor });
-    await page.setContent(
-      `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:#fff}` +
-        `svg{display:block}</style>${svg}`,
-      { waitUntil: 'load' },
-    );
-    return await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width, height } });
+    const file = join(dir, 'page.svg');
+    writeFileSync(file, svg);
+    const r = await renderToPNG(file, { dpi, outDir: dir, timeoutMs });
+    if (!r.ok) throw new Error(r.reason);
+    return readFileSync(r.pages[0]);
   } finally {
-    await browser.close();
+    rmSync(dir, { recursive: true, force: true });
   }
 }
 
 /**
- * Pixel diff, done inside the browser so Node needs no PNG decoder.
- * @returns {{mode:'pixel', differing:number, total:number, ratio:number, match:boolean}}
+ * Scores two PNG files against each other and optionally writes the diff image.
+ * See `lib/pixel.mjs` for what the number means; `describeMetric()` returns it as data.
+ *
+ * @returns {{mode:'pixel', score:number, …}} the `comparePixels` result with `diff` replaced
+ *   by the path it was written to (or dropped when `diffPath` is not given)
  */
-export async function comparePixels(svgA, svgB, { width = 816, height = 1056, threshold = 12 } = {}) {
-  const r = detectRasteriser();
-  if (!r.available) return null;
-  const { chromium } = await import('playwright');
-  const browser = await chromium.launch();
+export function comparePNGFiles(a, b, { diffPath, ...opts } = {}) {
+  const result = comparePixelBuffers(decodePNG(readFileSync(a)), decodePNG(readFileSync(b)), {
+    ...opts,
+    diff: Boolean(diffPath),
+  });
+  const { diff, ...rest } = result;
+  if (diffPath && diff) {
+    mkdirSync(resolve(diffPath, '..'), { recursive: true });
+    writeFileSync(diffPath, encodePNG(diff));
+  }
+  return { mode: 'pixel', ...rest, ...(diffPath && diff ? { diffPath } : {}) };
+}
+
+/**
+ * Pixel comparison of two SVG strings: rasterise both through LibreOffice, score the PNGs.
+ * Returns null when there is no rasteriser, which is what makes `compareSvg` degrade
+ * honestly rather than silently.
+ */
+export async function comparePixels(svgA, svgB, opts = {}) {
+  if (!detectRasteriser().available) return null;
+  const dir = mkdtempSync(join(tmpdir(), 'pubshift-pair-'));
   try {
-    const page = await browser.newPage({ viewport: { width, height } });
-    await page.setContent('<!doctype html><meta charset="utf-8"><body>', { waitUntil: 'load' });
-    const result = await page.evaluate(
-      async ([a, b, w, h, thr]) => {
-        const draw = (svg) =>
-          new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-              const c = document.createElement('canvas');
-              c.width = w;
-              c.height = h;
-              const ctx = c.getContext('2d');
-              ctx.fillStyle = '#fff';
-              ctx.fillRect(0, 0, w, h);
-              ctx.drawImage(img, 0, 0, w, h);
-              resolve(ctx.getImageData(0, 0, w, h).data);
-            };
-            img.onerror = () => reject(new Error('svg failed to load as an image'));
-            img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-          });
-        const [da, db] = await Promise.all([draw(a), draw(b)]);
-        let differing = 0;
-        for (let i = 0; i < da.length; i += 4) {
-          const d =
-            Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2]);
-          if (d > thr) differing++;
-        }
-        return { differing, total: da.length / 4 };
-      },
-      [svgA, svgB, width, height, threshold],
-    );
-    const ratio = result.total ? result.differing / result.total : 0;
-    return { mode: 'pixel', ...result, ratio, match: ratio <= 0.001 };
+    const a = join(dir, 'a.png');
+    const b = join(dir, 'b.png');
+    writeFileSync(a, await rasterise(svgA, opts));
+    writeFileSync(b, await rasterise(svgB, opts));
+    return comparePNGFiles(a, b, opts);
   } finally {
-    await browser.close();
+    rmSync(dir, { recursive: true, force: true });
   }
 }
+
+/** Marks on a rendered page. 0 means the rasteriser produced a blank sheet. */
+export function pngInkCount(path) {
+  return countInk(decodePNG(readFileSync(path)));
+}
+
+export { describeMetric, THRESHOLDS };
 
 // ---------------------------------------------------------------- svg parsing
 
@@ -637,6 +703,13 @@ function firstTextDivergence(a, b) {
 }
 
 /**
+ * Ink agreement above which two renders are called a match. Not 1: the rasteriser is
+ * deterministic but not bit-exact across page sizes, and a handful of boundary pixels on a
+ * 800,000-pixel page is not a fidelity finding. Below this, something moved.
+ */
+const PIXEL_MATCH_SCORE = 0.995;
+
+/**
  * The entry point emitters should call. Uses pixels when a rasteriser exists and
  * structure otherwise; the result always says which, so a green run can never be
  * mistaken for a pixel-verified one.
@@ -653,7 +726,13 @@ export async function compareSvg(svgA, svgB, opts = {}) {
     return structural;
   }
   const pixel = await comparePixels(svgA, svgB, opts);
-  return { ...structural, pixel, rasteriser: r, match: structural.match && pixel.match, pixelComparison: 'ran' };
+  return {
+    ...structural,
+    pixel,
+    rasteriser: r,
+    match: structural.match && pixel.score >= PIXEL_MATCH_SCORE,
+    pixelComparison: 'ran',
+  };
 }
 
 // ---------------------------------------------------------------- baselines
@@ -690,7 +769,7 @@ function summarise(result) {
   lines.push(`mode        ${result.mode}${result.pixel ? ' + pixel' : ''}`);
   lines.push(`match       ${result.match ? 'yes' : 'NO'}`);
   lines.push(`score       ${result.score}`);
-  if (result.pixel) lines.push(`pixels      ${result.pixel.differing}/${result.pixel.total} differ`);
+  if (result.pixel) lines.push(`pixels      ${summarisePixel(result.pixel)}`);
   else lines.push(`pixels      unavailable — ${result.rasteriser?.reason ?? 'no rasteriser'}`);
   for (const [k, v] of Object.entries(result.similarity)) lines.push(`  ${k.padEnd(14)}${v}`);
   if (result.differences.length) {
@@ -702,21 +781,62 @@ function summarise(result) {
   return lines.join('\n');
 }
 
+/** One line of prose for a pixel result — the numbers people actually want to read. */
+function summarisePixel(p) {
+  const d = p.dimensions;
+  const size = d.match ? `${d.compared.width}x${d.compared.height}` : `${d.reference.width}x${d.reference.height} vs ${d.candidate.width}x${d.candidate.height} — PAGE SIZE DIFFERS`;
+  const curve = Object.entries(p.byRadius).map(([r, s]) => `${r}px ${s}`).join('  ');
+  return (
+    `ink agreement ${p.score} at ${p.radius}px  (${curve})\n` +
+    `            ink ${p.ink.reference} ref / ${p.ink.candidate} out` +
+    `, ${p.ink.lost} lost, ${p.ink.recoloured} recoloured\n` +
+    `            raw per-pixel ${p.perPixel.exactRatio} exact, ${p.perPixel.tolerantRatio} within ${p.perPixel.channelTolerance}/255  ·  ${size}`
+  );
+}
+
 async function main(argv) {
   const opt = (n) => {
     const i = argv.indexOf(n);
     return i >= 0 ? argv[i + 1] : undefined;
   };
   const tolerance = opt('--tolerance') !== undefined ? Number(opt('--tolerance')) : 0.5;
+  const dpi = opt('--dpi') !== undefined ? Number(opt('--dpi')) : DEFAULT_DPI;
 
   if (argv.includes('--check')) {
-    const r = detectRasteriser();
-    console.log(JSON.stringify(r, null, 2));
+    console.log(JSON.stringify({ rasteriser: detectRasteriser(), metric: describeMetric(), thresholds: THRESHOLDS }, null, 2));
     return 0;
   }
   if (argv.includes('--self-test')) return (await import('./test.mjs')).runSelfTest();
 
-  const files = argv.filter((a, i) => !a.startsWith('--') && !argv[i - 1]?.match(/^--(tolerance|record|compare)$/));
+  const files = argv.filter(
+    (a, i) => !a.startsWith('-') && !argv[i - 1]?.match(/^(--tolerance|--record|--compare|--dpi|--diff|-o|--out)$/),
+  );
+
+  const render = opt('--render');
+  if (render !== undefined) {
+    const r = await renderToPNG(render, { dpi, outDir: opt('-o') ?? opt('--out') });
+    if (!r.ok) {
+      console.error(`cannot render ${render}: ${r.reason}`);
+      return 1;
+    }
+    console.log(`${r.pages.length} page(s) via ${r.via} in ${r.ms}ms`);
+    for (const p of r.pages) console.log(`  ${p}`);
+    return 0;
+  }
+
+  if (argv.includes('--png')) {
+    if (files.length !== 2) {
+      console.error('usage: node tools/fidelity/render.mjs --png <a.png> <b.png> [--diff out.png]');
+      return 2;
+    }
+    const r = comparePNGFiles(files[0], files[1], { diffPath: opt('--diff') });
+    if (argv.includes('--json')) console.log(JSON.stringify(r, null, 2));
+    else {
+      console.log(summarisePixel(r));
+      if (r.diffPath) console.log(`            diff written to ${r.diffPath}`);
+    }
+    return r.score >= PIXEL_MATCH_SCORE ? 0 : 1;
+  }
 
   const record = opt('--record');
   if (record) {
@@ -740,10 +860,12 @@ async function main(argv) {
   }
 
   if (files.length !== 2) {
-    console.error('usage: node tools/fidelity/render.mjs <a.svg> <b.svg> [--json] [--tolerance N]');
+    console.error('usage: node tools/fidelity/render.mjs <a.svg> <b.svg> [--json] [--tolerance N] [--dpi N]');
+    console.error('       node tools/fidelity/render.mjs --render <file> [-o dir] [--dpi N]  # every page to PNG');
+    console.error('       node tools/fidelity/render.mjs --png <a.png> <b.png> [--diff d.png]  # score two renders');
     console.error('       node tools/fidelity/render.mjs --record base.json <svg...>   # snapshot today');
     console.error('       node tools/fidelity/render.mjs --compare base.json <svg...>  # fail on drift');
-    console.error('       node tools/fidelity/render.mjs --check      # rasteriser availability');
+    console.error('       node tools/fidelity/render.mjs --check      # rasteriser availability and the metric');
     console.error('       node tools/fidelity/render.mjs --self-test  # verify the comparator itself');
     return 2;
   }

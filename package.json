@@ -12,7 +12,11 @@
     "test": "npm run test --workspaces --if-present",
     "dev": "npm run dev -w @pubshift/web",
     "fidelity": "node tools/fidelity/run.mjs",
-    "fidelity:test": "node tools/fidelity/test.mjs"
+    "fidelity:test": "node tools/fidelity/test.mjs",
+    "licence:fetch": "node tools/licence/sources.mjs fetch",
+    "licence:verify": "node tools/licence/sources.mjs verify",
+    "licence:notices": "node tools/licence/sources.mjs notices",
+    "licence:offer": "node tools/licence/sources.mjs offer"
   },
   "allowScripts": {
     "esbuild@0.21.5": true

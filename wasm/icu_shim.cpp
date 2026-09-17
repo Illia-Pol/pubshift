@@ -200,32 +200,54 @@ void decodeUtf16LE(UConverter *c, const uint8_t *p, size_t n)
   }
 }
 
-/* windows-932 is the one delegated encoding where ICU and the WHATWG decoders
- * disagree in a way worth correcting. ICU's ibm-943 distinguishes two failure
- * modes that TextDecoder collapses into U+FFFD:
+/* Corrections applied on top of the host decoder, for the single-byte cases
+ * where ICU's converter and the WHATWG Encoding spec disagree.
  *
- *   structurally valid pair, unassigned  -> U+FFFD   (2 bytes consumed)
- *   malformed or truncated               -> U+001A   (1 byte consumed)
+ * Two different hosts had to be measured, because they are not the same
+ * decoder. node's TextDecoder is ICU-backed and already agrees with the native
+ * extractor; a browser's implements WHATWG and does not. Chrome 152 was checked
+ * directly (test/browser-check.html) rather than inferred from the node run.
  *
- * Measured over all 65792 one- and two-byte inputs: that distinction accounts
- * for every single divergence, so applying it makes the delegated decoder match
- * ICU exactly.
+ * windows-932 is ICU's ibm-943_P15A-2003, which carries the IBM PC control
+ * swap — 0x1A means U+001C, 0x1C means U+007F, 0x7F means U+001A — and rejects
+ * 0x80-0xA0 and 0xE0-0xFF standing alone. WHATWG shift_jis passes all of those
+ * through or replaces them. The rule is stated over input bytes rather than
+ * over the decoder's output so it gives the same answer under both hosts.
  *
- * The rule is stated over input bytes rather than over the decoder's output,
- * because the two TextDecoder implementations we care about disagree with each
- * other here: node's is ICU-backed and already yields U+001A for 0x7F, while a
- * browser's follows WHATWG and yields U+007F for 0x7F and U+0080 for 0x80.
- * Keying on the byte ranges ICU was measured to reject (0x7F-0xA0, 0xE0-0xFF
- * when they do not form a valid pair) gives the same answer under both. */
-void fixupSjis(std::vector<Unit> &units, const uint8_t *p, size_t n)
+ * windows-950 and windows-936 differ only on bytes ICU maps into the private
+ * use area, which is not text under either interpretation.
+ *
+ * What this does NOT fix is the two-byte space: ICU's tables assign private-use
+ * code points where the WHATWG tables have nothing, and the trail-byte validity
+ * edges differ. Closing that would mean shipping the tables this delegation
+ * exists to avoid, and none of it is reachable — see the detector note below,
+ * and the numbers in README.md. */
+void fixupDelegated(ConverterKind kind, std::vector<Unit> &units,
+                    const uint8_t *p, size_t n)
 {
   size_t off = 0;
   for (Unit &u : units)
   {
-    if (u.bytes == 1 && off < n)
+    if (u.bytes != 1 || off >= n) { off += u.bytes; continue; }
+    const uint8_t b = p[off];
+    switch (kind)
     {
-      uint8_t b = p[off];
-      if ((b >= 0x7F && b <= 0xA0) || b >= 0xE0) u.cp = 0x1A;
+    case CK_SJIS:
+      if (b == 0x1A)                      u.cp = 0x1C;
+      else if (b == 0x1C)                 u.cp = 0x7F;
+      else if (b == 0x7F)                 u.cp = 0x1A;
+      else if (b >= 0x80 && b <= 0xA0)    u.cp = 0x1A;
+      else if (b >= 0xE0)                 u.cp = 0x1A;
+      break;
+    case CK_BIG5:
+      if (b == 0x80)                      u.cp = 0x80;
+      else if (b == 0xFF)                 u.cp = 0xF8F8;
+      break;
+    case CK_GBK:
+      if (b == 0xFF)                      u.cp = 0xF8F5;
+      break;
+    default:
+      break;
     }
     off += u.bytes;
   }
@@ -259,7 +281,7 @@ void decodeViaHost(UConverter *c, const uint8_t *p, size_t n)
   pubshift_td_free(cps);
   pubshift_td_free(lens);
 
-  if (c->kind == CK_SJIS) fixupSjis(c->units, p, n);
+  fixupDelegated(c->kind, c->units, p, n);
 }
 
 void ensureDecoded(UConverter *c, const char *source, const char *sourceLimit)

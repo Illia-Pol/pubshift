@@ -4,3 +4,7 @@ node_modules/
 *.tsbuildinfo
 next-env.d.ts.bak
 .env*.local
+lib/wasm-asset.ts
+public/wasm/
+public/licences/
+public/_headers

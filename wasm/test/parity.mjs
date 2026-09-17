@@ -152,65 +152,72 @@ function firstDifferingIndex(a, b) {
 
 
 /**
- * The one divergence that is not a bug.
+ * Known cause of divergence, diagnosed rather than excused.
  *
- * libmspub decides an arc's large-arc flag with `angleDifference >= M_PI`
- * (PolygonUtils.cpp), and its own comment notes that at exactly 180 degrees the
- * large and small arcs are the same curve. For an exact semicircle the comparison
- * sits precisely on the boundary, so whether it lands >= or < depends on the last
- * bit returned by atan2 — and native ARM libm and emscripten's musl legitimately
- * differ there.
+ * On 2026-09-17 exactly one file, fdo68259-5.pub, differed: one arc's
+ * `librevenge:large-arc` flag. The cause is not the shim and not libm — it is
+ * fused multiply-add.
  *
- * So: a differing large-arc flag is accepted ONLY when the two endpoints are a
- * full diameter apart, i.e. the arc really is a semicircle and the flag cannot
- * change what is drawn. Anything else is still a failure.
+ * libmspub computes an ellipse centre as `y + scaleY * v` (PolygonUtils.cpp)
+ * and then decides the flag with `angleDifference >= M_PI`. On arm64, clang's
+ * default -ffp-contract=on fuses that multiply-add into a single FMA, so the
+ * centre lands one ULP away from where two separate roundings would put it.
+ * For an exact semicircle that one ULP is the whole decision. WebAssembly has
+ * no scalar FMA instruction at all, so a WASM build cannot reproduce it at any
+ * optimisation level or -ffp-contract setting.
+ *
+ * Measured, not assumed: rebuilding libmspub from source with
+ * -ffp-contract=off and relinking the native extractor makes all 31 files
+ * byte-identical to this WASM build. The fix therefore belongs in the native
+ * build, which today links Homebrew's prebuilt libmspub; it is also worth
+ * doing on its own merits, since an oracle whose output depends on whether the
+ * host CPU has an FMA unit is not much of an oracle.
+ *
+ * This function only *labels* such a difference in the report. It never makes
+ * a differing file pass: CLAUDE.md says WASM and native output must stay
+ * byte-identical, and a test that quietly forgives a mismatch is worse than no
+ * test at all.
  */
-const SEMICIRCLE_TOLERANCE = 1e-4;
+function classifyDivergence(nativeText, wasmText) {
+  let a;
+  let b;
+  try {
+    a = JSON.parse(nativeText);
+    b = JSON.parse(wasmText);
+  } catch {
+    return 'malformed output';
+  }
+  if (a.events?.length !== b.events?.length) return 'structural';
 
-function isSemicircleArc(prev, arc) {
-  if (!prev || !arc) return false;
-  const rx = arc['svg:rx']?.v, ry = arc['svg:ry']?.v;
-  if (rx == null || ry == null || Math.abs(rx - ry) > SEMICIRCLE_TOLERANCE) return false;
-  const dx = arc['svg:x']?.v - prev['svg:x']?.v;
-  const dy = arc['svg:y']?.v - prev['svg:y']?.v;
-  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return false;
-  return Math.abs(Math.hypot(dx, dy) - 2 * rx) <= SEMICIRCLE_TOLERANCE;
-}
-
-/** True when the only differences between two IR payloads are benign semicircle flags. */
-function divergenceIsBenign(nativeText, wasmText) {
-  let a, b;
-  try { a = JSON.parse(nativeText); b = JSON.parse(wasmText); } catch { return false; }
-  if (a.events?.length !== b.events?.length) return false;
-
-  let benign = 0;
+  let onlyLargeArc = true;
   for (let i = 0; i < a.events.length; i++) {
-    const ea = a.events[i], eb = b.events[i];
+    const ea = a.events[i];
+    const eb = b.events[i];
     if (JSON.stringify(ea) === JSON.stringify(eb)) continue;
 
-    const pa = ea.p?.['svg:d'], pb = eb.p?.['svg:d'];
-    if (!Array.isArray(pa) || !Array.isArray(pb) || pa.length !== pb.length) return false;
+    const pa = ea.p?.['svg:d'];
+    const pb = eb.p?.['svg:d'];
+    if (!Array.isArray(pa) || !Array.isArray(pb) || pa.length !== pb.length) {
+      onlyLargeArc = false;
+      break;
+    }
+    const stripD = (e) => JSON.stringify({ ...e, p: { ...e.p, 'svg:d': null } });
+    if (stripD(ea) !== stripD(eb)) { onlyLargeArc = false; break; }
 
-    for (let k = 0; k < pa.length; k++) {
-      if (JSON.stringify(pa[k]) === JSON.stringify(pb[k])) continue;
-      // The ONLY key allowed to differ is large-arc, and only on a true semicircle.
+    for (let k = 0; k < pa.length && onlyLargeArc; k++) {
       const keys = new Set([...Object.keys(pa[k]), ...Object.keys(pb[k])]);
       for (const key of keys) {
-        if (key === 'librevenge:large-arc') continue;
-        if (JSON.stringify(pa[k][key]) !== JSON.stringify(pb[k][key])) return false;
+        if (JSON.stringify(pa[k][key]) === JSON.stringify(pb[k][key])) continue;
+        if (key !== 'librevenge:large-arc') { onlyLargeArc = false; break; }
       }
-      if (!isSemicircleArc(pa[k - 1], pa[k])) return false;
-      benign++;
     }
-    // Everything outside svg:d must still match exactly.
-    const stripD = (e) => JSON.stringify({ ...e, p: { ...e.p, 'svg:d': null } });
-    if (stripD(ea) !== stripD(eb)) return false;
   }
-  return benign > 0;
+  return onlyLargeArc
+    ? 'arc large-arc flag only — consistent with native FMA contraction (see the note above)'
+    : 'unexplained';
 }
 
 let identical = 0;
-let benignCount = 0;
 const failures = [];
 const timings = [];
 
@@ -230,26 +237,23 @@ for (const name of files) {
     if (verbose) {
       console.log(`  ok   ${name.padEnd(46)} ${String(bytes.length).padStart(8)} B  ${wasmMs.toFixed(1)} ms`);
     }
-  } else if (divergenceIsBenign(nativeText, wasmText)) {
-    identical++;
-    benignCount++;
-    console.log(`  ok   ${name.padEnd(46)} (semicircle large-arc flag differs; provably same curve)`);
   } else {
-    failures.push({ name, detail: describeDivergence(nativeText, wasmText) });
+    failures.push({
+      name,
+      kind: classifyDivergence(nativeText, wasmText),
+      detail: describeDivergence(nativeText, wasmText),
+    });
     console.log(`  DIFF ${name}`);
   }
 }
 
 console.log('');
-console.log(
-  `parity: ${identical}/${files.length} equivalent to the native extractor` +
-  (benignCount ? ` (${identical - benignCount} byte-identical, ${benignCount} differing only in a semicircle's large-arc flag)` : ' — byte-identical')
-);
+console.log(`parity: ${identical}/${files.length} byte-identical to the native extractor`);
 
 if (failures.length > 0) {
   console.log('');
   for (const f of failures) {
-    console.log(`--- ${f.name}`);
+    console.log(`--- ${f.name}  [${f.kind}]`);
     console.log(f.detail);
   }
 }

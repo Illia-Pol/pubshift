@@ -32,17 +32,36 @@ Second-order benefit that matters for a founder with no audience: **marginal cos
 files on a CDN. No conversion servers, no queue, no per-file cost, no abuse surface. The product can
 sit online for years unattended at roughly the price of a domain.
 
-**2. PPTX first, not DOCX first.**
-Everyone converts Publisher to Word, because Microsoft's own guidance says Word. This is the wrong
-target and it is why every existing converter produces a mess.
+**2. PPTX first, not DOCX first — but only where the document has a layout.**
+Everyone converts Publisher to Word, because Microsoft's own guidance says Word. The
+reasoning behind leading with PowerPoint instead is sound: a Publisher page is
+absolutely-positioned boxes on a fixed canvas, and so is a PowerPoint slide, whereas a
+Word document is a *flow* of paragraphs.
 
-A Publisher page is a set of absolutely-positioned boxes on a fixed-size canvas. A Word document is
-a *flow* of paragraphs. Mapping one to the other destroys the layout — which is the entire reason
-the document was made in Publisher and not in Word.
+Measured, the story is more specific than "PowerPoint is better", and the honest version
+is the more useful one. Across 24 scored corpus files the two formats are nearly tied on
+average — PPTX 0.772, DOCX 0.771 — but they are tied by winning different documents:
 
-A PowerPoint slide is *also* a set of absolutely-positioned boxes on a fixed-size canvas. The mapping
-is close to one-to-one. We lead with PPTX, explain why in one sentence the user understands, and
-still offer DOCX for the cases where the words matter more than the layout.
+| Document | PPTX | DOCX |
+|---|---|---|
+| `tables.pub` | **0.960** | 0.494 |
+| `table-merged.pub` | **0.841** | 0.689 |
+| `text-style.pub` | 0.792 | **0.998** |
+| `bold-style.pub` | 0.867 | **1.000** |
+| `langs.pub` | 0.829 | **0.975** |
+
+Exactly what the formats predict: a document that is genuinely laid out survives as
+slides and is mangled by a flow; a document that is really just prose in one frame
+survives Word intact and loses only a hair's-width baseline shift in PowerPoint. PPTX is
+also the steadier of the two — 3 poor scores against DOCX's 7 — which is why it stays the
+default.
+
+So the product leads with PowerPoint, offers Word plainly, and where the evidence is
+strong it says which one suits *this* file. A full shape-based heuristic was tried and
+measured first: it picked the better format on 13 of 24 files, a coin flip, and was cut
+back until it only speaks where it is right — 7 wins, 0 losses, 1 tie on the 8 files it
+now claims, silent on the other 16. A recommendation that is right half the time is worse
+than none, because it spends trust that this product has nothing else to buy.
 
 **3. We tell you what broke.**
 Every converter claims perfect fidelity and silently drops things. We carry a `Warning` list through

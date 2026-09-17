@@ -39,6 +39,10 @@ export class PubshiftLoadError extends Error {
 
 let cached = null;
 
+// One decoder for the whole module: the IR is always UTF-8, and building a new
+// TextDecoder per conversion is pure overhead on the hot path.
+const utf8 = new TextDecoder('utf-8');
+
 /**
  * Instantiates the WebAssembly module. Cheap to call repeatedly: the first call
  * does the work and later ones return the same handle, so a page can call it
@@ -89,8 +93,7 @@ class Pubshift {
    * @throws {PubshiftError} when the file is not readable Publisher
    */
   extract(bytes) {
-    const view = toBytes(bytes);
-    const json = this.extractJSON(view);
+    const json = this.extractJSON(bytes);
 
     let parsed;
     try {
@@ -141,9 +144,7 @@ class Pubshift {
       // Decode from the heap directly. UTF8ToString would stop at a NUL, and
       // while the extractor escapes control characters, reading by the length
       // it reported is the version that cannot be surprised.
-      return new TextDecoder('utf-8').decode(
-        wasm.HEAPU8.subarray(outPtr, outPtr + len),
-      );
+      return utf8.decode(wasm.HEAPU8.subarray(outPtr, outPtr + len));
     } finally {
       // Every exit path, including a throw from inside the module: a converter
       // that leaks a document's worth of memory per file would die on the

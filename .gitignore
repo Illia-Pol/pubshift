@@ -7,3 +7,16 @@ wasm/dist/*.wasm
 *.log
 .DS_Store
 /tmp/
+third_party/
+dist-source/
+apps/web/public/wasm/
+apps/web/public/licences/THIRD-PARTY-NOTICES.md
+
+# fidelity harness renders and diff images (generated, large, regenerate with `node tools/fidelity/compare.mjs`)
+tools/fidelity/.artifacts/
+tools/fidelity/.artifacts/
+apps/web/out/
+apps/web/.next/
+apps/web/tsconfig.tsbuildinfo
+native/build/
+native/build.sh.bak

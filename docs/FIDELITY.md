@@ -41,21 +41,65 @@ prevent. If that gate is ever removed, the product is no better than the free up
 Largest accepted losses: `svg:fill-rule` (280x), `draw:fill-image-ref-point` (90x), `libmspub:shade`
 (36x), per-channel image colour adjustment (7x each).
 
+## Conversion quality, scored against a render of the original
+
+`node tools/fidelity/compare.mjs` renders the original `.pub` with LibreOffice, runs our
+pipeline to PPTX/DOCX/PDF/SVG, renders those the same way, and scores symmetric ink
+agreement at a 1px placement tolerance. 24 files, 50 pages:
+
+| Format | Score | good / fair / poor |
+|---|---|---|
+| **PPTX** (flagship) | **0.772** | 4 / 17 / 3 |
+| DOCX | 0.771 | 9 / 8 / 7 |
+| SVG | 0.763 | 8 / 9 / 7 |
+| PDF | 0.759 | 8 / 9 / 7 |
+
+The reference is LibreOffice opening the same `.pub` — which uses libmspub, the same
+parser behind our extractor. That holds the parse constant and isolates our model and
+emitters, which is the thing under test. It is **not** a measurement against Microsoft
+Publisher's own rendering; nothing available here can produce that.
+
+Two cautions about reading these numbers. PPTX and DOCX are close on average but win
+different documents (see docs/POSITIONING.md) — PPTX is the steadier, DOCX the streakier.
+And PPTX carries a measured ~2.5px systematic downward text offset that costs it roughly
+0.2 on text-only files while being invisible at 0.027 inch; it comes from a first-baseline
+convention in LibreOffice Impress, so it may not exist in PowerPoint itself. It has been
+left alone deliberately: tuning an emitter to score better against one renderer's
+convention is optimising the measurement instead of the user.
+
+### A measurement bug worth remembering
+
+The first run of this comparison reported 0.584 overall and scored five files at exactly
+0.000. The emitters were fine. The reference cache was keyed on the source file and the
+renderer version but not on the rendering code, so a run served pages produced by an older
+pipeline, and our (correctly) trimmed leading blank page was compared against the
+reference's blank master page. The numbers were wrong and entirely plausible, which is the
+worst way for a measuring tool to fail. `cacheKey` now includes a hash of `render.mjs`.
+
 ## WebAssembly parity
 
 The browser build must agree with the native build, which is the independent oracle:
 
 ```
-parity: 31/31 equivalent (30 byte-identical, 1 differing only in a semicircle's large-arc flag)
-cold module load 3.1 ms · median file 0.5 ms · slowest (600 KB) 28 ms · pubshift.wasm 465 KB
+parity: 31/31 byte-identical to the native extractor
+cold module load 2.6 ms · median file 0.6 ms · slowest (600 KB) 29 ms · pubshift.wasm 465 KB
 ```
 
-The single divergence is provably benign and narrowly exempted. libmspub decides the flag with
-`angleDifference >= M_PI` and notes in its own comment that at exactly 180° the large and small arcs
-are the same curve. Both diverging arcs are exact semicircles — chord 2.047239 against diameter
-2.047240 — so the comparison sits on the boundary where ARM libm and emscripten's musl differ in the
-last bit. `wasm/test/parity.mjs` accepts a differing large-arc flag **only** when the endpoints are a
-full diameter apart; any other divergence still fails.
+Getting to 31/31 took a real fix rather than a tolerance. One file diverged on a single
+arc's `large-arc` flag. The cause was fused multiply-add: libmspub computes an ellipse
+centre as `y + scaleY * v` and then decides the flag with `angleDifference >= M_PI`, and on
+arm64 clang defaults to `-ffp-contract=on` and fuses that into one FMA, landing a ULP away
+from where two roundings put it. For an exact semicircle that ULP is the whole decision,
+and WebAssembly has no scalar FMA instruction, so no WASM build could ever match it.
+
+The first instinct was to exempt the case as visually irrelevant — at exactly 180° the
+large and small arcs are the same curve, so it was genuinely harmless. That was the wrong
+call: a parity test that forgives a mismatch stops being an oracle. Instead `native/build.sh`
+now compiles libmspub and librevenge **from the same sources as the WASM build, with
+`-ffp-contract=off`**, rather than linking Homebrew's prebuilt library. Both sides now
+compile the same code with the same floating-point semantics, and the invariant holds
+exactly. An oracle whose answer depends on whether the host CPU has an FMA unit is not an
+oracle.
 
 ## Known limits
 

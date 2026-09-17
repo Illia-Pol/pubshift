@@ -11,13 +11,17 @@ import { fileURLToPath } from 'node:url';
 
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { deflateSync } from 'node:zlib';
 import {
   structuralSignature, compareSignatures, parsePath, detectRasteriser,
-  recordBaseline, compareToBaseline,
+  recordBaseline, compareToBaseline, renderToPNG, comparePNGFiles, pngInkCount,
 } from './render.mjs';
+import { decodePNG, encodePNG, readPNGSize } from './lib/png.mjs';
+import { comparePixels, countInk, describeMetric, THRESHOLDS } from './lib/pixel.mjs';
 import { emptyProfile, addFile, finalizeProfile } from './lib/profile.mjs';
 import { checkCoverage } from './lib/coverage.mjs';
 import { extractOne, corpusFiles } from './lib/extract.mjs';
+import { alignReferencePages } from './compare.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '../..');
@@ -322,12 +326,394 @@ test('a non-Publisher file fails with a user-readable message, not a crash', () 
   assert.ok(r.error.message.length > 0);
 });
 
+// ---------------------------------------------------------------- png codec
+//
+// The decoder is tested against PNGs this file builds itself, with an independent forward
+// implementation of the five scanline filters. A round-trip through our own encoder would
+// only prove the two halves agree with each other.
+
+const PNG_SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+function testCrc32(buf) {
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) {
+    c ^= buf[i];
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  }
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function testChunk(type, data) {
+  const head = Buffer.alloc(8);
+  head.writeUInt32BE(data.length, 0);
+  head.write(type, 4, 'latin1');
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(testCrc32(Buffer.concat([Buffer.from(type, 'latin1'), data])), 0);
+  return Buffer.concat([head, data, crc]);
+}
+
+const testPaeth = (a, b, c) => {
+  const p = a + b - c;
+  const pa = Math.abs(p - a);
+  const pb = Math.abs(p - b);
+  const pc = Math.abs(p - c);
+  return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+};
+
+/** Forward filter — the inverse of what the decoder does, written independently. */
+function applyFilter(type, row, prev, bpp) {
+  const out = Buffer.alloc(row.length);
+  for (let i = 0; i < row.length; i++) {
+    const a = i >= bpp ? row[i - bpp] : 0;
+    const b = prev ? prev[i] : 0;
+    const c = prev && i >= bpp ? prev[i - bpp] : 0;
+    const sub =
+      type === 0 ? 0 : type === 1 ? a : type === 2 ? b : type === 3 ? (a + b) >> 1 : testPaeth(a, b, c);
+    out[i] = (row[i] - sub) & 0xff;
+  }
+  return out;
+}
+
+/** Builds a PNG from raw scanlines with a chosen filter per row. */
+function buildPNG({ width, height, bitDepth = 8, colorType = 2, interlace = 0, rows, filters, palette }) {
+  const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[colorType];
+  const bpp = Math.max(1, Math.ceil((channels * bitDepth) / 8));
+  const parts = [];
+  let prev = null;
+  for (let y = 0; y < height; y++) {
+    const type = filters ? filters[y % filters.length] : 0;
+    parts.push(Buffer.from([type]), applyFilter(type, rows[y], prev, bpp));
+    prev = rows[y];
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = bitDepth;
+  ihdr[9] = colorType;
+  ihdr[12] = interlace;
+  return Buffer.concat([
+    PNG_SIG,
+    testChunk('IHDR', ihdr),
+    ...(palette ? [testChunk('PLTE', palette)] : []),
+    testChunk('IDAT', deflateSync(Buffer.concat(parts))),
+    testChunk('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+/** A 4x4 RGB gradient, as raw scanlines. */
+function gradientRows(width, height) {
+  return Array.from({ length: height }, (_, y) => {
+    const row = Buffer.alloc(width * 3);
+    for (let x = 0; x < width; x++) {
+      row[x * 3] = (x * 37 + y * 11) & 0xff;
+      row[x * 3 + 1] = (x * 5 + y * 71) & 0xff;
+      row[x * 3 + 2] = (x * 97 + y * 3) & 0xff;
+    }
+    return row;
+  });
+}
+
+test('png: every scanline filter decodes back to the original bytes', () => {
+  const rows = gradientRows(9, 7);
+  for (const filter of [0, 1, 2, 3, 4]) {
+    const img = decodePNG(buildPNG({ width: 9, height: 7, rows, filters: [filter] }));
+    assert.equal(img.width, 9);
+    assert.equal(img.height, 7);
+    for (let y = 0; y < 7; y++) {
+      for (let x = 0; x < 9; x++) {
+        const o = (y * 9 + x) * 4;
+        assert.equal(img.data[o], rows[y][x * 3], `filter ${filter} at ${x},${y} red`);
+        assert.equal(img.data[o + 1], rows[y][x * 3 + 1], `filter ${filter} at ${x},${y} green`);
+        assert.equal(img.data[o + 2], rows[y][x * 3 + 2], `filter ${filter} at ${x},${y} blue`);
+        assert.equal(img.data[o + 3], 255);
+      }
+    }
+  }
+});
+
+test('png: filters mixed row by row, which is what a real encoder emits', () => {
+  const rows = gradientRows(9, 7);
+  const img = decodePNG(buildPNG({ width: 9, height: 7, rows, filters: [4, 0, 2, 1, 3] }));
+  assert.equal(img.data[0], rows[0][0]);
+  assert.equal(img.data[(6 * 9 + 8) * 4 + 2], rows[6][8 * 3 + 2]);
+});
+
+test('png: greyscale, palette and 16-bit all arrive as RGBA', () => {
+  const grey = decodePNG(buildPNG({ width: 2, height: 1, colorType: 0, rows: [Buffer.from([10, 200])] }));
+  assert.deepEqual([...grey.data.slice(0, 8)], [10, 10, 10, 255, 200, 200, 200, 255]);
+
+  const paletted = decodePNG(
+    buildPNG({
+      width: 2,
+      height: 1,
+      colorType: 3,
+      rows: [Buffer.from([1, 0])],
+      palette: Buffer.from([255, 0, 0, 0, 0, 255]),
+    }),
+  );
+  assert.deepEqual([...paletted.data.slice(0, 8)], [0, 0, 255, 255, 255, 0, 0, 255]);
+
+  // 16-bit: the decoder keeps the high byte, which is all this comparison ever needs.
+  const deep = decodePNG(
+    buildPNG({ width: 2, height: 1, bitDepth: 16, colorType: 0, rows: [Buffer.from([0x12, 0x34, 0xab, 0xcd])] }),
+  );
+  assert.equal(deep.data[0], 0x12);
+  assert.equal(deep.data[4], 0xab);
+});
+
+test('png: sub-byte bit depths expand to the full range', () => {
+  // 4-bit greyscale: 0x0f is white, 0x00 is black, and both must land on 0..255.
+  const img = decodePNG(buildPNG({ width: 2, height: 1, bitDepth: 4, colorType: 0, rows: [Buffer.from([0x0f])] }));
+  assert.equal(img.data[0], 0);
+  assert.equal(img.data[4], 255);
+});
+
+test('png: an interlaced file is refused by name, not mis-decoded', () => {
+  assert.throws(
+    () => decodePNG(buildPNG({ width: 2, height: 2, interlace: 1, rows: gradientRows(2, 2) })),
+    /Adam7/,
+  );
+});
+
+test('png: a truncated or non-PNG buffer is refused', () => {
+  assert.throws(() => decodePNG(Buffer.from('not a png at all')), /signature/);
+  const good = buildPNG({ width: 4, height: 4, rows: gradientRows(4, 4) });
+  assert.throws(() => decodePNG(good.subarray(0, good.length - 30)), /truncated|IDAT|IEND/i);
+});
+
+test('png: our encoder round-trips through our decoder, header included', () => {
+  const data = new Uint8Array(6 * 5 * 4);
+  for (let i = 0; i < data.length; i++) data[i] = (i * 13) & 0xff;
+  for (let i = 3; i < data.length; i += 4) data[i] = 255;
+  const png = encodePNG({ width: 6, height: 5, data });
+  assert.deepEqual(readPNGSize(png), { width: 6, height: 5 });
+  const back = decodePNG(png);
+  assert.equal(back.width, 6);
+  assert.deepEqual([...back.data], [...data]);
+});
+
+test('png: the encoder refuses a buffer that is the wrong size for the dimensions', () => {
+  assert.throws(() => encodePNG({ width: 4, height: 4, data: new Uint8Array(10) }), /needs 64 bytes/);
+});
+
+// ---------------------------------------------------------------- pixel score
+
+const WHITE = [255, 255, 255];
+const BLACK = [0, 0, 0];
+const RED = [220, 20, 20];
+
+function image(w, h, marks = []) {
+  const data = new Uint8Array(w * h * 4).fill(255);
+  for (let i = 0; i < w * h; i++) data[i * 4 + 3] = 255;
+  for (const [x, y, colour] of marks) {
+    const o = (y * w + x) * 4;
+    data[o] = colour[0];
+    data[o + 1] = colour[1];
+    data[o + 2] = colour[2];
+    data[o + 3] = 255;
+  }
+  return { width: w, height: h, data };
+}
+
+test('pixels: an image scores 1 against itself', () => {
+  const a = image(20, 20, [[5, 5, BLACK], [6, 5, BLACK], [7, 5, RED]]);
+  const r = comparePixels(a, a);
+  assert.equal(r.score, 1);
+  assert.equal(r.blank, false);
+  assert.equal(r.byRadius[0], 1);
+  assert.equal(r.ink.lost, 0);
+});
+
+test('pixels: two blank pages score 1 and say they are blank', () => {
+  const r = comparePixels(image(10, 10), image(10, 10));
+  assert.equal(r.blank, true);
+  assert.equal(r.score, 1);
+  assert.equal(r.ink.reference, 0);
+});
+
+test('pixels: a blank output against a real page scores 0, not 0.99', () => {
+  const marks = Array.from({ length: 20 }, (_, i) => [i, 5, BLACK]);
+  const r = comparePixels(image(40, 40, marks), image(40, 40));
+  assert.equal(r.score, 0);
+  assert.equal(r.ink.lost, 20);
+  // The raw per-pixel number is exactly the trap this metric exists to avoid.
+  assert.ok(r.perPixel.tolerantRatio > 0.98, 'a blank page is 98% identical to a printed one');
+});
+
+test('pixels: a one-pixel shift is forgiven at r=1 and visible at r=0', () => {
+  const marks = (dy) => Array.from({ length: 10 }, (_, i) => [i + 3, 5 + dy, BLACK]);
+  const r = comparePixels(image(30, 30, marks(0)), image(30, 30, marks(1)));
+  assert.equal(r.byRadius[1], 1, 'a 1px shift is inside the placement tolerance');
+  assert.ok(r.byRadius[0] < 0.2, 'and plainly visible without it');
+  assert.equal(r.score, r.byRadius[1]);
+});
+
+test('pixels: a three-pixel shift is not forgiven at any reported radius', () => {
+  const marks = (dy) => Array.from({ length: 10 }, (_, i) => [i + 3, 5 + dy, BLACK]);
+  const r = comparePixels(image(30, 30, marks(0)), image(30, 30, marks(3)));
+  assert.ok(r.byRadius[2] < 0.1);
+  assert.equal(r.ink.lost, 10);
+});
+
+test('pixels: antialiasing coverage matches, hue does not', () => {
+  const at = (colour) => [[5, 5, colour]];
+  const solid = image(20, 20, at(BLACK));
+  // The same black glyph at 45% coverage over white.
+  const faint = image(20, 20, at([140, 140, 140]));
+  assert.equal(comparePixels(solid, faint).score, 1, 'grey is black at lower coverage');
+
+  const recoloured = comparePixels(solid, image(20, 20, at(RED)));
+  assert.equal(recoloured.score, 0, 'red is not black');
+  assert.equal(recoloured.ink.recoloured, 1, 'and is reported as recoloured, not lost');
+  assert.equal(recoloured.ink.lost, 0);
+});
+
+test('pixels: lost ink and recoloured ink are counted apart', () => {
+  const ref = image(30, 30, [[5, 5, BLACK], [6, 5, BLACK], [20, 20, BLACK]]);
+  const out = image(30, 30, [[5, 5, RED], [6, 5, RED]]);
+  const r = comparePixels(ref, out);
+  assert.equal(r.ink.recoloured, 2);
+  assert.equal(r.ink.lost, 1);
+});
+
+test('pixels: a page emitted at the wrong size is padded, never scaled', () => {
+  const ref = image(40, 40, [[10, 10, BLACK]]);
+  const half = image(20, 20, [[10, 10, BLACK]]);
+  const r = comparePixels(ref, half);
+  assert.equal(r.dimensions.match, false);
+  assert.deepEqual(r.dimensions.compared, { width: 40, height: 40 });
+  assert.equal(r.score, 1, 'the mark is at the same place; only the sheet is smaller');
+
+  const scaled = image(20, 20, [[5, 5, BLACK]]);
+  assert.equal(comparePixels(ref, scaled).score, 0, 'a scaled-down page is not the same page');
+});
+
+test('pixels: faint marks below the ink threshold are not marks', () => {
+  const faint = [Math.round(255 - THRESHOLDS.INK_THRESHOLD / 2)];
+  const grey = [faint[0], faint[0], faint[0]];
+  assert.equal(countInk(image(10, 10, [[1, 1, grey]])), 0);
+  assert.equal(countInk(image(10, 10, [[1, 1, BLACK]])), 1);
+});
+
+test('pixels: the diff image marks losses red and additions blue', () => {
+  const ref = image(20, 20, [[3, 3, BLACK]]);
+  const out = image(20, 20, [[15, 15, BLACK]]);
+  const r = comparePixels(ref, out);
+  const px = (img, x, y) => [...img.data.slice((y * img.width + x) * 4, (y * img.width + x) * 4 + 3)];
+  assert.deepEqual(px(r.diff, 3, 3), [216, 27, 44], 'the reference mark we did not reproduce');
+  assert.deepEqual(px(r.diff, 15, 15), [21, 96, 216], 'the mark we invented');
+  assert.deepEqual(px(r.diff, 10, 10), [255, 255, 255], 'untouched page stays white');
+});
+
+test('pixels: the metric describes itself, including what it cannot see', () => {
+  const m = describeMetric();
+  assert.equal(m.headline, 'score');
+  assert.ok(m.definition.includes('ink'));
+  assert.ok(m.doesNotCapture.some((s) => /Publisher/.test(s)), 'it must admit it is not measured against Publisher');
+  assert.ok(m.doesNotCapture.length >= 3);
+});
+
+// ---------------------------------------------------------------- page alignment
+
+test('a leading blank page in the reference is stripped, and only as far as the surplus', () => {
+  // LibreOffice's Publisher import puts a blank sheet in front of some documents.
+  const r = alignReferencePages(['blank', 'a'], [0, 500], 1);
+  assert.deepEqual(r.pages, ['a']);
+  assert.equal(r.strippedLeadingBlanks, 1);
+});
+
+test('a reference blank is kept when the page counts already agree', () => {
+  // Both sides start with a blank page: that is agreement, not an artefact.
+  const r = alignReferencePages(['blank', 'a'], [0, 500], 2);
+  assert.deepEqual(r.pages, ['blank', 'a']);
+  assert.equal(r.strippedLeadingBlanks, 0);
+});
+
+test('only LEADING reference blanks are stripped, never interior ones', () => {
+  const r = alignReferencePages(['a', 'blank', 'b'], [500, 0, 500], 1);
+  assert.deepEqual(r.pages, ['a', 'blank', 'b'], 'an interior blank must keep its position');
+  assert.equal(r.strippedLeadingBlanks, 0);
+});
+
+test('a blank page of OURS in the middle does not renumber the pages after it', () => {
+  // This is the regression that made REG-TST2 score 0.028 on a page that was merely
+  // misaligned: our page 2 renders blank, and dropping it slid pages 3 and 4 up a slot.
+  // The reference is untouched here, so page 3 still lines up with page 3.
+  const reference = ['r1', 'r2', 'r3', 'r4'];
+  const r = alignReferencePages(reference, [500, 500, 500, 500], 4);
+  assert.deepEqual(r.pages, reference);
+  assert.equal(r.strippedLeadingBlanks, 0);
+});
+
+test('several leading blanks are stripped, but no further than the surplus', () => {
+  const r = alignReferencePages(['b1', 'b2', 'b3', 'a'], [0, 0, 0, 500], 2);
+  assert.deepEqual(r.pages, ['b3', 'a'], 'two pages of surplus means two blanks removed');
+  assert.equal(r.strippedLeadingBlanks, 2);
+});
+
 // ---------------------------------------------------------------- rasteriser
 
 test('rasteriser detection is honest about being unavailable', () => {
   const r = detectRasteriser();
   assert.equal(typeof r.available, 'boolean');
   if (!r.available) assert.ok(r.reason.length > 0, 'an unavailable rasteriser must say why');
+  else assert.ok(r.pdfRasteriser, 'an available rasteriser must name what turns PDF into pages');
+});
+
+test('a real .pub renders to one PNG per page at the requested DPI', async () => {
+  if (!detectRasteriser().available) return; // nothing to test without LibreOffice
+  const file = corpusFiles(join(ROOT, 'packages/core/test/corpus')).find((f) => f.name === 'tables.pub');
+  const dir = mkdtempSync(join(tmpdir(), 'pubshift-render-test-'));
+  const r = await renderToPNG(file.path, { dpi: 96, outDir: dir });
+  assert.equal(r.ok, true, r.reason);
+  assert.ok(r.pages.length >= 1);
+  // tables.pub is US Letter: 612x792pt at 96 DPI is 816x1056 px.
+  assert.deepEqual(readPNGSize(readFileSync(r.pages[0])), { width: 816, height: 1056 });
+  assert.ok(pngInkCount(r.pages[0]) > 0, 'the reference page must actually have something on it');
+  assert.equal(comparePNGFiles(r.pages[0], r.pages[0]).score, 1);
+});
+
+test('a multi-page document really does produce every page, not just the first', async () => {
+  if (!detectRasteriser().available) return;
+  // This is the LibreOffice quirk the whole render path is built around: `--convert-to png`
+  // would silently hand back page one alone.
+  const file = corpusFiles(join(ROOT, 'packages/core/test/corpus')).find((f) => f.name === 'fdo68259-1.pub');
+  const dir = mkdtempSync(join(tmpdir(), 'pubshift-render-test-'));
+  const r = await renderToPNG(file.path, { dpi: 96, outDir: dir });
+  assert.equal(r.ok, true, r.reason);
+  assert.ok(r.pages.length >= 2, `expected more than one page, got ${r.pages.length}`);
+});
+
+test('an unrenderable file is refused with a reason rather than a stack trace', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pubshift-render-test-'));
+  const junk = join(dir, 'thing.xyz');
+  writeFileSync(junk, 'not a document');
+  const r = await renderToPNG(junk, { outDir: dir });
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /no renderer for \.xyz/);
+});
+
+test('LibreOffice refusing a file is a reported failure, not a hang', async () => {
+  if (!detectRasteriser().available) return;
+  // It has to be genuinely unloadable. LibreOffice is far more permissive than you would
+  // expect — handed plain text named `.pub` it renders it as a text document and succeeds —
+  // so this uses a truncated OOXML package, which its zip layer really does reject.
+  const dir = mkdtempSync(join(tmpdir(), 'pubshift-render-test-'));
+  const junk = join(dir, 'broken.pptx');
+  writeFileSync(junk, Buffer.from('PK truncated', 'latin1'));
+  const r = await renderToPNG(junk, { outDir: dir, timeoutMs: 60000 });
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /produced no pdf/);
+});
+
+test('a LibreOffice run that overruns its timeout is killed and reported', async () => {
+  if (!detectRasteriser().available) return;
+  // 1ms is unreachable, so this exercises the kill path rather than a slow document.
+  const file = corpusFiles(join(ROOT, 'packages/core/test/corpus')).find((f) => f.name === 'tables.pub');
+  const dir = mkdtempSync(join(tmpdir(), 'pubshift-render-test-'));
+  const r = await renderToPNG(file.path, { outDir: dir, timeoutMs: 1 });
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /exceeded 1ms and was killed/);
 });
 
 // ---------------------------------------------------------------- runner

@@ -3,14 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/prepare-assets.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/prepare-assets.mjs && node scripts/emit-host-config.mjs",
     "build": "next build",
+    "//build:paid": "Adds the Stripe routes, which means the output is a server app, not a static export. See docs/DEPLOY.md.",
+    "build:paid": "PUBSHIFT_PAYMENTS=1 next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@pubshift/core": "*",
+    "jszip": "^3.10.1",
     "next": "^15.1.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

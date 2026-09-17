@@ -140,6 +140,57 @@ wasm_size=$(wc -c < "$OUTDIR/pubshift.wasm" | tr -d ' ')
 mjs_size=$(wc -c < "$OUTDIR/pubshift.mjs" | tr -d ' ')
 gz=$( (gzip -9 -c "$OUTDIR/pubshift.wasm" | wc -c) | tr -d ' ')
 
+# SOURCES.txt — what actually went into this binary.
+#
+# third-party.json pins the components; this records which build produced the
+# artifact sitting next to it, including the versions third-party.json defers to
+# ("recorded-at-build-time"). Serving pubshift.wasm from a web page distributes
+# MPL-2.0 code in executable form, and an offer of source that cannot say which
+# source is not an offer, so this is written by the build rather than by hand.
+{
+  echo "pubshift wasm build manifest"
+  echo "generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo
+  echo "toolchain"
+  echo "  emscripten: $(em++ --version | head -1)"
+  echo "  clang:      $(em++ -v 2>&1 | grep -m1 'clang version' || echo 'unknown')"
+  echo
+  echo "third-party source"
+  echo "  root: $SRC"
+  if [ -d "$MSPUB/.git" ]; then
+    echo "  libmspub:   $(git -C "$MSPUB" rev-parse HEAD 2>/dev/null || echo unknown)" \
+         "($(git -C "$MSPUB" log -1 --format=%cI 2>/dev/null || echo '?'))"
+  else
+    mspub_ver="$(sed -nE 's/^m4_define\(\[libmspub_version_(major|minor|micro)\],\[([0-9]+)\]\)$/\2/p' "$MSPUB/configure.ac" 2>/dev/null | paste -sd. -)"
+    echo "  libmspub:   ${mspub_ver:-unknown} (release tree, not a git checkout)"
+  fi
+  if [ -d "$REV/.git" ]; then
+    echo "  librevenge: $(git -C "$REV" rev-parse HEAD 2>/dev/null || echo unknown)"
+  else
+    rev_ver="$(sed -nE 's/^m4_define\(\[librevenge_version_(major|minor|micro)\],\[([0-9]+)\]\)$/\2/p' "$REV/configure.ac" 2>/dev/null | paste -sd. -)"
+    echo "  librevenge: ${rev_ver:-unknown} (release tree, not a git checkout)"
+  fi
+  echo "  boost:      emscripten port boost_headers"
+  echo "  zlib:       emscripten port (-sUSE_ZLIB=1)"
+  echo "  ICU:        not linked — see wasm/icu_shim.cpp and wasm/icu_shim_data.inc"
+  echo
+  echo "compiled translation units (${#SOURCES[@]})"
+  for s in "${SOURCES[@]}"; do
+    rel="${s#"$SRC/"}"; rel="${rel#"$ROOT/"}"
+    echo "  $rel"
+  done
+  echo
+  echo "flags"
+  echo "  ${CXXFLAGS[*]}"
+  echo "  ${LDFLAGS[*]}"
+  echo
+  echo "artifacts"
+  for f in pubshift.wasm pubshift.mjs; do
+    echo "  $f  $(wc -c < "$OUTDIR/$f" | tr -d ' ') bytes  sha256=$(shasum -a 256 "$OUTDIR/$f" | cut -d' ' -f1)"
+  done
+} > "$OUTDIR/SOURCES.txt"
+
 echo "built:"
 printf "  pubshift.wasm  %s bytes (%s gzipped)\n" "$wasm_size" "$gz"
 printf "  pubshift.mjs   %s bytes\n" "$mjs_size"
+printf "  SOURCES.txt    what went into it\n"
