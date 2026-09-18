@@ -15,8 +15,10 @@ export const metadata: Metadata = {
  * the usual paragraphs would hide the only fact that matters.
  *
  * Every sentence here is a statement about what the code does. If the code changes,
- * this page changes in the same commit — see `next.config.mjs`, where the
- * Content-Security-Policy makes the central claim enforceable rather than promised.
+ * this page changes in the same commit — see `lib/csp.mjs`, where the
+ * Content-Security-Policy makes the central claim enforceable rather than promised,
+ * and which is careful about the difference between the copy in the page's own head
+ * (everywhere) and the copy in an HTTP header (only where a host sends one).
  */
 export default function PrivacyPage() {
   return (
@@ -80,10 +82,22 @@ export default function PrivacyPage() {
             because nothing about it needed a network.
           </p>
           <p>
-            The page also ships a Content Security Policy that tells your browser to refuse any
-            connection to any other site, and to refuse to submit a form anywhere at all. Every
-            current browser enforces it. That turns “we do not upload your file” from a promise about
-            our conduct into a rule your own browser applies to us.
+            The page also carries a Content Security Policy — a list of rules your own browser
+            enforces against this page. Two of them do the work here:{' '}
+            <code className="text-ink">connect-src &lsquo;self&rsquo;</code>, which makes the browser
+            refuse any connection this page tries to open to any other site, and{' '}
+            <code className="text-ink">form-action &lsquo;none&rsquo;</code>, which makes it refuse
+            to submit a form anywhere at all. Every current browser enforces both.
+          </p>
+          <p>
+            That policy is written into the page itself, as a{' '}
+            <code className="text-ink">&lt;meta http-equiv&gt;</code> tag in the HTML — use your
+            browser&rsquo;s View Source and you can read it near the top. Being part of the page
+            rather than part of a server&rsquo;s configuration is the point: it applies wherever this
+            site is hosted, including on a copy someone has downloaded and is serving themselves.
+            Where the host can also send HTTP headers, the identical policy is sent again that way,
+            which additionally carries the one rule a meta tag is not allowed to carry — refusing to
+            let another site put this page in a frame.
           </p>
           <p>
             Neither of those is a promise. One is a test you can run in twenty seconds, and the other

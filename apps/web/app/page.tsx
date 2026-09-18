@@ -5,7 +5,14 @@ import Faq from '@/components/Faq';
 import JsonLd from '@/components/JsonLd';
 import { FAQ } from '@/lib/faq';
 import { FORMAT_LIST } from '@/lib/formats';
-import { CORPUS, RETIREMENT_DATE, SITE_NAME, SITE_URL, SUPPORT_END_DATE } from '@/lib/site';
+import {
+  CORPUS,
+  OFFICE_2019_SUPPORT_ENDED,
+  RETIREMENT_DATE,
+  SITE_NAME,
+  SITE_URL,
+  SUPPORT_END_DATE,
+} from '@/lib/site';
 
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
@@ -22,7 +29,7 @@ const ASSURANCES = [
 const LIMITS = [
   {
     title: 'Some Publisher files cannot be read at all',
-    body: `Out of the ${CORPUS.total} real Publisher files we test against, ${CORPUS.withContent} come out with their contents intact, ${CORPUS.empty} open without any error at all and turn out to hold nothing we can see, and one is not a Publisher file despite its name. Which group yours falls into cannot be worked out from the file — only by trying. When it is the second group, we tell you, and you get no download rather than a blank one.`,
+    body: `Out of the ${CORPUS.total} real Publisher files we test against, ${CORPUS.intact} come out with their contents intact and ${CORPUS.partial} comes out only partly — its shapes converted, its text did not, and we say so on that file. ${CORPUS.empty} open without any error at all and turn out to hold nothing we can see, and ${CORPUS.notPublisher} is not a Publisher file despite its name. Which group yours falls into cannot be worked out from the file — only by trying. When nothing can be read we tell you, and you get no download rather than a blank one.`,
   },
   {
     title: 'Old clipart usually disappears',
@@ -122,11 +129,11 @@ export default function HomePage() {
 
         <div className="mt-4 max-w-prose space-y-4 text-muted">
           <p>
-            Every other free .pub converter we know of works the same way: you send them your file,
-            their server converts it, you download the result. This one has nowhere to send it. The
-            program that reads Publisher files was compiled to run inside a web browser, so when you
-            drop a file in, it is opened here, by this page, on your own machine. It does not cross
-            the network, because there is no network step.
+            Every other free .pub converter you can use in a browser works the same way: you send
+            them your file, their server converts it, you download the result. This one has nowhere
+            to send it. The program that reads Publisher files was compiled to run inside a web
+            browser, so when you drop a file in, it is opened here, by this page, on your own
+            machine. It does not cross the network, because there is no network step.
           </p>
           <p>
             That matters when your publication has people in it. A parish directory has home
@@ -242,9 +249,12 @@ export default function HomePage() {
           <div className="card p-5">
             <h3 className="font-semibold">If you bought Publisher outright</h3>
             <p className="mt-2 text-sm text-muted">
-              A one-off purchase — Publisher 2019 or 2021, say — is not taken away from you. It stays
-              on the computer and keeps opening your files. What ends, on {SUPPORT_END_DATE}, is
-              Microsoft’s support: no more updates and no more security fixes.
+              A one-off purchase is not taken away from you. It stays on the computer and keeps
+              opening your files. What ends is Microsoft’s support — no more updates and no more
+              security fixes. For Publisher 2021, whether it came with Office LTSC 2021 or with a
+              consumer Office 2021, that is {SUPPORT_END_DATE}. Publisher 2019 is not on the same
+              timetable: its support ended in {OFFICE_2019_SUPPORT_ENDED}, and it still opens your
+              files today.
             </p>
           </div>
         </div>

@@ -9,7 +9,7 @@
  * that only makes sense next to a link is not an answer.
  */
 
-import { RETIREMENT_DATE, SUPPORT_END_DATE, CORPUS } from '@/lib/site';
+import { OFFICE_2019_SUPPORT_ENDED, RETIREMENT_DATE, SUPPORT_END_DATE, CORPUS } from '@/lib/site';
 
 export interface FaqItem {
   /** Phrased the way a person would type or say it. */
@@ -23,7 +23,8 @@ export const FAQ: FaqItem[] = [
     q: 'Can I still use Publisher after October 2026?',
     a: [
       `It depends on how you got it, and the difference is the whole story. If Publisher came as part of a Microsoft 365 subscription, Microsoft removes it on ${RETIREMENT_DATE} and it stops opening after that date.`,
-      `If you bought Publisher outright as a one-off purchase — Publisher 2019 or Publisher 2021, for instance — nothing is taken away from you. The program stays on your computer and keeps opening your files. What ends, on ${SUPPORT_END_DATE}, is Microsoft’s support for it: no more updates, no more security fixes, and no help if a future version of Windows stops running it.`,
+      `If you bought Publisher outright as a one-off purchase, nothing is taken away from you. The program stays on your computer and keeps opening your files. What ends is Microsoft’s support for it: no more updates, no more security fixes, and no help if a future version of Windows stops running it. For Publisher 2021 — whether it came with Office LTSC 2021 or with a consumer Office 2021 — that happens on ${SUPPORT_END_DATE}.`,
+      `Publisher 2019 is not on that timetable, and you may have been told it is. Its support ended earlier, in ${OFFICE_2019_SUPPORT_ENDED}. That changed nothing you can see: it still opens your files, and it will keep doing so. Being out of support is not the same as being taken away, for 2019 or for 2021.`,
       'In neither case do your .pub files get deleted, locked or expire. They stay on your disk exactly as they are. What shrinks is the list of programs able to read them.',
     ],
   },
@@ -40,7 +41,7 @@ export const FAQ: FaqItem[] = [
     a: [
       'No, and not because we promise not to look — because there is nothing to look at. The program that reads Publisher files was compiled to run inside your web browser. When you drop a file in, this page opens it on your own computer. It is not uploaded, copied or sent anywhere, and no server of ours ever has it.',
       'You can check that yourself: convert one file, then disconnect from the internet and convert another. It still works, because nothing about it needed the network.',
-      'That is the difference that matters if your publication is a member directory, a donor list, a class list or a photo page with children’s names under it. Every other free .pub converter we know of works by uploading your file to its own servers.',
+      'That is the difference that matters if your publication is a member directory, a donor list, a class list or a photo page with children’s names under it. Every other free .pub converter you can use in a browser works by uploading your file to its own servers. The free ones that do not upload — LibreOffice, further down this page — are programs you have to install, which is a different trade and not always one you are allowed to make on a work computer.',
     ],
   },
   {

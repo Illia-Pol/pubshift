@@ -14,7 +14,8 @@
  * gives a clean file.
  */
 
-import type { Row } from './types';
+import { lossSentences, needsAttention } from './report';
+import type { FileResult } from './types';
 import { paint as makePaint, shorten, type Paint } from './ui';
 
 const ESC = '[';
@@ -71,24 +72,26 @@ export class Progress {
     this.#render();
   }
 
-  tick(row: Row): void {
+  tick(result: FileResult): void {
     this.#done++;
-    if (row.status === 'converted') this.#converted++;
-    else if (row.status === 'attention') this.#attention++;
-    else this.#skipped++;
+    const flagged = needsAttention(result);
+    if (flagged) this.#attention++;
+    else if (result.outcome === 'skipped') this.#skipped++;
+    else this.#converted++;
 
     if (this.#options.quiet) return;
 
     // A file that needs a person is permanent output, at every verbosity but quiet.
-    if (row.status === 'attention') {
+    if (flagged) {
       this.#clear();
-      this.#stream.write(`${this.#paint.amber('needs a person')}  ${row.relative}\n`);
-      this.#stream.write(`                ${this.#paint.dim(row.reason)}\n`);
+      const lost = result.message ?? lossSentences(result).join(' ');
+      this.#stream.write(`${this.#paint.amber('needs a person')}  ${result.source}\n`);
+      if (lost !== '') this.#stream.write(`                ${this.#paint.dim(lost)}\n`);
     } else if (this.#options.verbose) {
-      const where = row.outputs.length === 0 ? '' : `  -> ${row.outputs.map((o) => o.format).join(', ')}`;
-      const word = row.status === 'skipped' ? 'skipped      ' : 'converted    ';
-      this.#stream.write(`${word}  ${row.relative}${where}\n`);
-      for (const note of row.notes) this.#stream.write(`                ${this.#paint.dim(note)}\n`);
+      const formats = [...new Set(result.outputs.map((o) => o.format))].join(', ');
+      const where = formats === '' ? '' : `  -> ${formats}`;
+      const word = result.outcome === 'skipped' ? 'skipped      ' : 'converted    ';
+      this.#stream.write(`${word}  ${result.source}${where}\n`);
     } else if (!this.#live && this.#done % LOG_EVERY === 0) {
       this.#stream.write(`${this.#counter()}\n`);
     }

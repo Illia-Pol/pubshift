@@ -26,6 +26,12 @@ import {
  */
 const AVAILABLE = availableFormats();
 
+/**
+ * How long a failed extractor load is left alone before an idle hover may try it
+ * again. The visitor can always retry immediately with the button on the error.
+ */
+const WARM_RETRY_COOLDOWN_MS = 15_000;
+
 const STATUS_LABEL: Record<QueueItem['status'], string> = {
   ready: 'Waiting',
   working: 'Converting on your computer',
@@ -49,6 +55,34 @@ function isStage(value: string | undefined): value is Stage {
 
 function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
+}
+
+let idCounter = 0;
+
+/**
+ * An id for a queued file: a React key and the key of the preview-URL map, so it
+ * only has to be unique within this tab.
+ *
+ * `crypto.randomUUID` is **not available outside a secure context** — on plain
+ * HTTP, `crypto` exists but `randomUUID` is undefined, and calling it throws inside
+ * a React event handler, which unmounts the whole panel. Nobody would see an error
+ * message; the page would simply vanish when they dropped their first file.
+ *
+ * That is not a hypothetical deployment. This is a static directory any parish or
+ * school IT volunteer can copy onto an internal box and serve over http:// to the
+ * office, which is a perfectly sensible thing to do with a tool whose entire point
+ * is that it needs no server. It has to work there.
+ */
+function newId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // Some hardened builds throw on access rather than leaving it undefined.
+  }
+  idCounter += 1;
+  return `file-${Date.now().toString(36)}-${idCounter}`;
 }
 
 /** Hands a Blob that only exists in this tab to the browser's download machinery. */
@@ -106,7 +140,18 @@ export default function Converter() {
   /** The single sentence a screen reader hears as the batch moves along. */
   const [announcement, setAnnouncement] = useState('');
 
-  const warmed = useRef(false);
+  /**
+   * 'idle' before the first attempt and after a failed one, so a retry is possible;
+   * 'running' while in flight; 'ok' once the extractor is up, after which there is
+   * nothing to retry.
+   */
+  const warmState = useRef<'idle' | 'running' | 'ok'>('idle');
+  /**
+   * Earliest a failed attempt may repeat itself. `onIntent` fires on every mouse
+   * enter, and without this a broken extractor would re-fetch 465 KB every time the
+   * pointer crossed the drop zone.
+   */
+  const warmRetryAfter = useRef(0);
   const stopping = useRef(false);
   const runnerRef = useRef<ConversionRunner | null>(null);
   /** Preview object URLs by item id, so each is revoked exactly once. */
@@ -142,24 +187,51 @@ export default function Converter() {
    * download they may never need; doing it on the Convert click would hide the
    * 465 KB fetch inside the first conversion and make it look slow.
    */
-  const warm = useCallback(() => {
-    if (warmed.current) return;
-    warmed.current = true;
+  const warm = useCallback(
+    // An options object rather than a positional `force` flag on purpose: this is
+    // handed straight to `onMouseEnter`/`onFocus`, which call it with a React event.
+    // A positional boolean would read that event as `force: true` and defeat the
+    // cooldown on every hover; a missing `force` property cannot.
+    (options?: { force?: boolean }) => {
+      const force = options?.force === true;
+      if (warmState.current === 'ok' || warmState.current === 'running') return;
+      // One transient failure — a flaky first fetch of the extractor, a proxy
+      // hiccup, a laptop that woke up mid-request — must not disable the Convert
+      // button for the life of the tab. The attempt is repeatable, so the state
+      // goes back to 'idle' on failure rather than latching on the first try.
+      if (!force && Date.now() < warmRetryAfter.current) return;
 
-    runner()
-      .warm()
-      .then((status) => {
-        if (status.ok) setEngineReady(true);
-        else setEngineProblem(status.message ?? 'The Publisher reader could not start here.');
-        setRunMode(runner().mode);
-      })
-      .catch(() => {
-        setEngineProblem(
-          'The Publisher reader could not start in this browser. A current version of Chrome, ' +
-            'Edge, Firefox or Safari will work.',
-        );
-      });
-  }, [runner]);
+      warmState.current = 'running';
+      setEngineProblem(null);
+
+      const failed = (message: string) => {
+        warmState.current = 'idle';
+        warmRetryAfter.current = Date.now() + WARM_RETRY_COOLDOWN_MS;
+        setEngineProblem(message);
+      };
+
+      runner()
+        .warm()
+        .then((status) => {
+          if (status.ok) {
+            warmState.current = 'ok';
+            setEngineReady(true);
+          } else {
+            failed(status.message ?? 'The Publisher reader could not start here.');
+          }
+          setRunMode(runner().mode);
+        })
+        .catch((error: unknown) => {
+          failed(
+            error instanceof Error && error.message
+              ? error.message
+              : 'The Publisher reader could not start in this browser. A current version of ' +
+                  'Chrome, Edge, Firefox or Safari will work.',
+          );
+        });
+    },
+    [runner],
+  );
 
   const addFiles = useCallback(
     (files: File[]) => {
@@ -167,7 +239,7 @@ export default function Converter() {
       setItems((current) => [
         ...current,
         ...files.map((file) => ({
-          id: crypto.randomUUID(),
+          id: newId(),
           file,
           status: 'ready' as const,
         })),
@@ -189,8 +261,18 @@ export default function Converter() {
   );
 
   const run = useCallback(async () => {
-    // The queue is read once, from the state we had when the button was pressed.
-    const queue = items.filter((item) => item.status !== 'done');
+    /*
+     * The queue is read once, from the state we had when the button was pressed,
+     * and it is **every file in the list** rather than only the ones not yet done.
+     *
+     * Skipping the finished ones looks like an optimisation and is a trap: convert
+     * a batch to PowerPoint, decide you wanted PDF as well, press Convert, and
+     * nothing at all happens — no output, no error, no explanation. The most common
+     * second thing anybody does with this tool is convert the same files to another
+     * format, so re-running has to mean re-running, and the new outputs replace the
+     * old ones on each row (`format` records which one they are).
+     */
+    const queue = items;
     if (queue.length === 0) return;
 
     warm();
@@ -342,8 +424,28 @@ export default function Converter() {
     }
   }, [items, ready, runner]);
 
-  const waiting = items.filter((item) => item.status !== 'done').length;
   const formatName = FORMATS[format].name;
+
+  /*
+   * The button describes what pressing it will do, which — since `run` takes the
+   * whole list — is the whole list. Counting only the unconverted ones made it
+   * disable itself after a successful batch and then sit there greyed out reading
+   * "Convert to PDF" once the format was changed, which is the opposite of the
+   * truth. `unreadable` and `error` rows are included in the count for the same
+   * reason: they are files in the list, and pressing Convert does try them again.
+   */
+  const alreadyInThisFormat =
+    items.length > 0 && items.every((item) => item.status === 'done' && item.format === format);
+
+  const buttonLabel = busy
+    ? 'Converting…'
+    : alreadyInThisFormat
+      ? items.length > 1
+        ? `Convert all ${items.length} again to ${formatName}`
+        : `Convert again to ${formatName}`
+      : items.length > 1
+        ? `Convert ${items.length} files to ${formatName}`
+        : `Convert to ${formatName}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -362,14 +464,10 @@ export default function Converter() {
         <button
           type="button"
           className="btn-primary"
-          disabled={busy || waiting === 0 || engineProblem !== null}
+          disabled={busy || items.length === 0 || engineProblem !== null}
           onClick={() => void run()}
         >
-          {busy
-            ? 'Converting…'
-            : waiting > 1
-              ? `Convert ${waiting} files to ${formatName}`
-              : `Convert to ${formatName}`}
+          {buttonLabel}
         </button>
 
         {busy && (
@@ -411,13 +509,23 @@ export default function Converter() {
       </p>
 
       {engineProblem && (
-        <p
+        <div
           role="alert"
           className="max-w-prose rounded-xl border border-line bg-surface p-4 text-sm text-danger"
         >
-          {engineProblem} Until 1 October 2026 you can still open your file in Publisher itself and
-          save it as PDF from there.
-        </p>
+          <p>
+            {engineProblem} Until 1 October 2026 you can still open your file in Publisher itself
+            and save it as PDF from there.
+          </p>
+          {/* A failed load is usually a flaky fetch, not a verdict on the browser, so
+              there has to be a way back. Without this the Convert button stayed
+              disabled for the life of the tab and reloading the page was the only cure. */}
+          <p className="mt-3">
+            <button type="button" className="btn-quiet" onClick={() => warm({ force: true })}>
+              Try loading the reader again
+            </button>
+          </p>
+        </div>
       )}
 
       {zipProblem && (

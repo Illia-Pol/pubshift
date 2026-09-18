@@ -6,19 +6,36 @@
  * fulfilment eventually sends. So the order below is deliberate and must not be
  * rearranged:
  *
- *      raw text  ->  verify signature  ->  parse  ->  dedupe  ->  fulfil
+ *      header pre-check  ->  bounded raw text  ->  verify signature  ->  parse
+ *                        ->  dedupe  ->  fulfil
  *
- * Reading the body as text first is not a style choice. `request.json()` would consume
- * the stream and force a re-serialisation to check the HMAC, and re-serialised JSON has
+ * Reading the body as text is not a style choice. `request.json()` would consume the
+ * stream and force a re-serialisation to check the HMAC, and re-serialised JSON has
  * different whitespace and key order, so the signature would never match — the usual
  * fix for which, disastrously, is to stop checking the signature.
+ *
+ * Reading it **with a limit** is not a style choice either. This URL is public by
+ * construction and takes unauthenticated POSTs from anyone who finds it. Buffering
+ * whatever arrives before anything is checked turns that into a one-request
+ * out-of-memory kill. So the parts of the signature that need no body are checked
+ * first, and then at most `MAX_WEBHOOK_BODY_BYTES` is read — which is still orders of
+ * magnitude more than any real Stripe event.
  *
  * Like the checkout route, `.pay.ts` means this file is only a route when
  * PUBSHIFT_PAYMENTS=1. See docs/DEPLOY.md.
  */
 
 import { NextResponse } from 'next/server';
-import { fulfil, paymentsConfig, seenBefore, verifyStripeSignature, type StripeEvent } from '@/lib/payments';
+import {
+  MAX_WEBHOOK_BODY_BYTES,
+  fulfil,
+  paymentsConfig,
+  preCheckStripeSignature,
+  readBodyCapped,
+  seenBefore,
+  verifyStripeSignature,
+  type StripeEvent,
+} from '@/lib/payments';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,13 +44,32 @@ export async function POST(request: Request): Promise<NextResponse> {
   const config = paymentsConfig();
   if (!config) return NextResponse.json({ received: false }, { status: 503 });
 
-  // 1. Raw bytes, exactly as sent. Nothing may touch the body before this.
-  const rawBody = await request.text();
+  const signature = request.headers.get('stripe-signature');
 
-  // 2. Prove it came from Stripe before believing a single field of it.
+  // 1. Everything that can be decided from the header alone — is there a signature,
+  //    does it parse, is its timestamp inside the replay window — before reading any
+  //    of the body. A caller who fails this never gets to allocate anything.
+  const pre = preCheckStripeSignature(signature);
+  if (!pre.ok) {
+    console.warn('stripe: rejected webhook —', pre.reason);
+    return NextResponse.json({ received: false }, { status: 400 });
+  }
+
+  // 2. Raw bytes, exactly as sent, and never more than the cap. Nothing may touch or
+  //    re-encode the body before the HMAC is computed over it.
+  const body = await readBodyCapped(request, MAX_WEBHOOK_BODY_BYTES);
+  if (!body.ok) {
+    console.warn('stripe: rejected webhook — body over', MAX_WEBHOOK_BODY_BYTES, 'bytes');
+    // 413, not 400: the request may have been well-formed and was simply too big.
+    // Stripe never sends anything near this, so this is a stranger, not a retry.
+    return NextResponse.json({ received: false }, { status: 413 });
+  }
+  const rawBody = body.text;
+
+  // 3. Prove it came from Stripe before believing a single field of it.
   const verified = await verifyStripeSignature<StripeEvent>(
     rawBody,
-    request.headers.get('stripe-signature'),
+    signature,
     config.webhookSecret,
   );
 
@@ -47,11 +83,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const event = verified.event;
 
-  // 3. Stripe retries until it sees a 2xx and can deliver the same event twice anyway.
+  // 4. Stripe retries until it sees a 2xx and can deliver the same event twice anyway.
   //    Acknowledge a repeat without re-running fulfilment.
   if (seenBefore(event.id)) return NextResponse.json({ received: true, duplicate: true });
 
-  // 4. Fulfil. A throw here must still return 200 only if the work is durably recorded;
+  // 5. Fulfil. A throw here must still return 200 only if the work is durably recorded;
   //    it is not, so a failure returns 500 and lets Stripe retry, which is the correct
   //    behaviour for a payment that has been taken but not yet acted on.
   try {

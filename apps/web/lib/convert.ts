@@ -69,6 +69,7 @@ interface EngineModule {
 }
 
 let enginePromise: Promise<ExtractorHandle> | null = null;
+let engineAttempt = 0;
 
 /**
  * The extractor could not be started here.
@@ -100,7 +101,8 @@ const ENGINE_FAILED =
 /**
  * Starts the extractor, once per thread. Safe and cheap to call early — the panel
  * calls it as soon as someone shows intent, so that by the time a file is dropped
- * the module is warm and the conversion is instant. Measured cold load is 3.1 ms.
+ * the module is warm and the conversion is instant. Measured cold load is 2.6 ms
+ * (docs/FIDELITY.md).
  *
  * It also means a visitor can convert one file, disconnect from the network, and
  * convert a second one. That is a test anybody can run, and we invite them to.
@@ -108,11 +110,25 @@ const ENGINE_FAILED =
 export function startEngine(): Promise<ExtractorHandle> {
   if (enginePromise) return enginePromise;
 
+  engineAttempt += 1;
+
   const started = (async () => {
     // A variable specifier plus the ignore comments: the bundler must not try to
     // follow this, because the file it points at is a copied build artefact served
     // from /public, not a module in the dependency graph.
-    const url = WASM_ENTRY_URL;
+    //
+    // The query string on a retry is not cache-busting for its own sake. A module
+    // that fails to load is recorded as failed in the realm's module map, and every
+    // later `import()` of the *same specifier* re-throws the stored error without
+    // going near the network (HTML standard, "fetch a single module script"). So a
+    // second attempt at the same URL is guaranteed to fail even after the asset is
+    // back — which would make the retry offered on screen a lie. A distinct
+    // specifier is a distinct entry, so the fetch genuinely happens again.
+    //
+    // It does not disturb anything else: `dist/pubshift.mjs` and `pubshift.wasm`
+    // are resolved relative to this module and URL resolution drops the query, so
+    // both keep their content-addressed, immutably cacheable URLs.
+    const url = engineAttempt === 1 ? WASM_ENTRY_URL : `${WASM_ENTRY_URL}?attempt=${engineAttempt}`;
     let mod: EngineModule;
     try {
       mod = (await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ url)) as EngineModule;

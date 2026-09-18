@@ -167,6 +167,71 @@ export type VerifyResult<T = unknown> =
   | { ok: true; event: T }
   | { ok: false; reason: VerifyFailure };
 
+/* ----------------------------------------------------- reading a request body -- */
+
+/**
+ * The most a request to either endpoint is allowed to be.
+ *
+ * Both routes used to buffer whatever arrived, entirely, before any check ran — so a
+ * single unauthenticated POST of a multi-gigabyte body was an out-of-memory kill on
+ * the function, from anyone who knows the URL. The webhook URL is public by
+ * construction; there is nothing to guess.
+ *
+ * A Stripe event is a few kilobytes and the largest documented ones are well under
+ * 100 KB, so 256 KB is generous by a wide margin and still small enough to be
+ * harmless. The checkout endpoint takes one JSON object holding one idempotency key
+ * of at most 128 characters, so 2 KB is already absurd for it.
+ */
+export const MAX_WEBHOOK_BODY_BYTES = 256 * 1024;
+export const MAX_CHECKOUT_BODY_BYTES = 2 * 1024;
+
+export type BodyResult = { ok: true; text: string } | { ok: false; reason: 'TOO_LARGE' };
+
+/**
+ * Reads a request body, refusing to hold more than `limit` bytes of it.
+ *
+ * `Content-Length` is checked first because it is free and rejects the honest
+ * oversized caller before a single byte is read. It is not trusted, though: it is
+ * absent on a chunked request and a hostile caller may simply lie, so the stream is
+ * also counted as it arrives and abandoned the moment it goes over. `request.text()`
+ * has no such bound, which is the whole defect.
+ */
+export async function readBodyCapped(request: Request, limit: number): Promise<BodyResult> {
+  const declared = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declared) && declared > limit) return { ok: false, reason: 'TOO_LARGE' };
+
+  const body = request.body;
+  if (!body) return { ok: true, text: '' };
+
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+      total += value.byteLength;
+      if (total > limit) {
+        await reader.cancel().catch(() => {});
+        return { ok: false, reason: 'TOO_LARGE' };
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const joined = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  // The signature is over these exact bytes, so decode once and never re-encode.
+  return { ok: true, text: new TextDecoder().decode(joined) };
+}
+
 /** Constant-time byte comparison. A length check may short-circuit; the contents may not. */
 function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
@@ -212,12 +277,26 @@ async function hmacSha256(secret: string, message: string): Promise<Uint8Array> 
  *
  * Returns the parsed event only after the signature is proven, never before.
  */
-export async function verifyStripeSignature<T = unknown>(
-  rawBody: string,
+export type SignaturePreCheck =
+  | { ok: true; timestamp: string; candidates: Uint8Array[] }
+  | { ok: false; reason: VerifyFailure };
+
+/**
+ * Everything about a `Stripe-Signature` header that can be decided **without the
+ * body**: that it is there, that it parses, that it carries at least one `v1=`, and
+ * that its timestamp is inside the replay window.
+ *
+ * Split out so the route can run it first and hang up on a caller who has no
+ * plausible signature at all, rather than buffering their payload and only then
+ * discovering there was never anything to check it against. The HMAC itself is over
+ * the whole body and genuinely cannot be computed before reading it — this is the
+ * most that can honestly be done first, and it is enough to turn "read anything,
+ * then decide" into "decide what we can, then read a bounded amount".
+ */
+export function preCheckStripeSignature(
   signatureHeader: string | null,
-  secret: string,
   toleranceSeconds: number = DEFAULT_TOLERANCE_SECONDS,
-): Promise<VerifyResult<T>> {
+): SignaturePreCheck {
   if (!signatureHeader) return { ok: false, reason: 'NO_SIGNATURE' };
 
   let timestamp: string | null = null;
@@ -243,6 +322,19 @@ export async function verifyStripeSignature<T = unknown>(
   // Absolute difference: a timestamp far in the future is as wrong as one far in the past.
   const skew = Math.abs(Math.floor(Date.now() / 1000) - sentAt);
   if (skew > toleranceSeconds) return { ok: false, reason: 'TIMESTAMP_OUT_OF_TOLERANCE' };
+
+  return { ok: true, timestamp, candidates };
+}
+
+export async function verifyStripeSignature<T = unknown>(
+  rawBody: string,
+  signatureHeader: string | null,
+  secret: string,
+  toleranceSeconds: number = DEFAULT_TOLERANCE_SECONDS,
+): Promise<VerifyResult<T>> {
+  const pre = preCheckStripeSignature(signatureHeader, toleranceSeconds);
+  if (!pre.ok) return pre;
+  const { timestamp, candidates } = pre;
 
   const expected = await hmacSha256(secret, `${timestamp}.${rawBody}`);
 

@@ -1,12 +1,20 @@
 /**
  * The vocabulary every other module in this package shares.
  *
- * One rule governs the whole shape of this file: a row is a *small, serialisable
- * record*. It holds path strings and counts, never file bytes and never a `Doc`.
- * The run loop keeps one row per source file for the final report, so a folder of
+ * One rule governs the whole shape of this file: a result is a *small, serialisable
+ * record*. It holds path strings, counts and warnings, never file bytes and never a
+ * `Doc`. The run loop keeps one per source file for the final report, so a folder of
  * four hundred bulletins holds four hundred of these — and that has to stay cheap
  * whether the bulletins are 20 KB or 20 MB.
+ *
+ * The one thing deliberately *not* flattened here is the warning list. The plain-English
+ * sentence for a loss lives in exactly one place (`report.ts`, matching the wording the
+ * website uses), so a result carries the codes and lets the report do the talking. Turning
+ * a warning into prose early is how the CLI and the site end up describing the same loss
+ * in two different ways.
  */
+
+import type { Warning } from '@pubshift/core';
 
 /** The formats an emitter in @pubshift/core can actually produce. */
 export type Format = 'pptx' | 'docx' | 'pdf' | 'svg';
@@ -16,81 +24,84 @@ export const FORMATS: readonly Format[] = ['pptx', 'docx', 'pdf', 'svg'];
 /** What the user may pass to `--to`. `auto` is resolved per file by recommendFormat(). */
 export type RequestedFormat = Format | 'auto';
 
-/** How the DOCX emitter should treat a page. See DOCX_MODE_DESCRIPTIONS in @pubshift/core. */
+/** How the DOCX emitter should treat a page. See EmitDOCXOptions in @pubshift/core. */
 export type DocxMode = 'layout' | 'flow';
 
 /** What to do when the output file already exists. */
 export type ConflictPolicy = 'rename' | 'skip' | 'overwrite';
 
 /**
- * Three outcomes, and the distinction between the last two is the one that matters.
+ * How one source file ended up, and the distinctions here are the product.
  *
- * `attention` means *we produced nothing and a person has to deal with this file*.
- * `skipped` means *we deliberately did not do the work*, almost always because the
- * output is already there from a previous run. Folding the second into the first
- * would make a re-run of a finished batch report four hundred problems, which would
- * teach the user to ignore the number that is supposed to be the whole point.
+ * `unreadable` is the case docs/FIDELITY.md is about: libmspub parsed the file without
+ * complaining and handed back nothing. Five of the thirty-one corpus files do exactly
+ * that. Nothing is written for them, ever — they are reported instead.
+ *
+ * `converted-with-caveats` is a file that *did* convert but lost something a person
+ * should look at. It is counted with the files needing attention rather than with the
+ * successes, because a parish archivist who opens only the flagged files must not miss
+ * the newsletter whose clip art vanished.
+ *
+ * `skipped` means we deliberately did not do the work, almost always because the output
+ * was already there from a previous run. Folding that into the attention list would make
+ * a re-run of a finished batch report four hundred problems, which teaches the user to
+ * ignore the one number that matters.
  */
-export type RowStatus = 'converted' | 'attention' | 'skipped';
+export type Outcome =
+  | 'converted'
+  | 'converted-with-caveats'
+  | 'unreadable'
+  | 'failed'
+  | 'skipped';
 
-/** Why `--to auto` chose what it chose. Written into the report, per the brief. */
-export type AutoRule = '' | 'auto: recommended' | 'auto: default (PPTX)';
-
-export interface OutputRecord {
-  format: Format;
-  /** Absolute path actually written. */
+export interface OutputFile {
+  /** Path as written. Absolute in a real run; empty for `check`, which writes nothing. */
   path: string;
-  bytes: number;
+  format: Format;
+  bytes?: number;
 }
 
-export interface Row {
-  /** Absolute path of the source file. */
+/** Which format was used for this file, and — when `--to auto` chose it — why. */
+export interface FormatChoice {
+  format: Format;
+  /** True when `--to auto` picked it rather than the user naming it. */
+  automatic: boolean;
+  /** One sentence for someone who has never heard of a text frame. Empty when not automatic. */
+  because: string;
+}
+
+/**
+ * Everything the report needs about one source file, and nothing else.
+ *
+ * Only `source`, `sizeBytes`, `outcome`, `outputs`, `pages` and `warnings` are required:
+ * a walk problem (a folder we could not open, a shortcut pointing nowhere) becomes one of
+ * these too, with a `message` and no outputs, so that the report has a single kind of row.
+ */
+export interface FileResult {
+  /** Path relative to the folder the user named — the spelling a person recognises. */
   source: string;
-  /** Source path relative to the folder the user named; this is what a person recognises. */
-  relative: string;
-  status: RowStatus;
+  sizeBytes: number;
+  outcome: Outcome;
+  outputs: OutputFile[];
+  pages: number;
+  /** Fidelity losses, still as codes. `report.ts` turns them into sentences. */
+  warnings: Warning[];
+  /** Absolute path on this disk. Carried for the JSON report and for `--verbose`. */
+  absolute?: string;
   /**
-   * One sentence for a person, empty when the conversion was clean. Where the
-   * failure came from @pubshift/core or the reader, this is *their* wording
-   * verbatim — those messages are already written for a non-technical reader and
-   * paraphrasing them badly is a regression.
+   * One sentence for a person, when something other than a fidelity loss needs saying.
+   * Where it came from @pubshift/core or the reader it is *their* wording verbatim —
+   * those messages are already written for a non-technical reader and paraphrasing them
+   * badly is a regression.
    */
-  reason: string;
-  outputs: OutputRecord[];
-  /** Which `--to auto` rule applied. Empty when the user named formats explicitly. */
-  rule: AutoRule;
-  /** assess()'s verdict, when we got far enough to have one. */
-  verdict?: 'ok' | 'partial' | 'empty';
-  pages?: number;
+  message?: string;
+  format?: FormatChoice;
+  /** Wall-clock milliseconds for this file. */
+  ms?: number;
+  /** assess()'s own counts, for the JSON report and for --verbose. */
   elements?: number;
   textLength?: number;
   images?: number;
-  /** Fidelity losses worth telling the user about, already flattened to sentences. */
-  notes: string[];
-  /** Wall-clock milliseconds for this file. */
-  ms: number;
-}
-
-export interface Summary {
-  converted: number;
-  attention: number;
-  skipped: number;
-  total: number;
-  ms: number;
-  /** Peak resident memory for the process, in bytes; 0 where the platform will not say. */
-  peakRssBytes: number;
-}
-
-export function summarise(rows: readonly Row[], ms: number, peakRssBytes: number): Summary {
-  let converted = 0;
-  let attention = 0;
-  let skipped = 0;
-  for (const row of rows) {
-    if (row.status === 'converted') converted++;
-    else if (row.status === 'attention') attention++;
-    else skipped++;
-  }
-  return { converted, attention, skipped, total: rows.length, ms, peakRssBytes };
 }
 
 /**
@@ -98,13 +109,13 @@ export function summarise(rows: readonly Row[], ms: number, peakRssBytes: number
  * These are a documented interface: somebody's backup script branches on them.
  */
 export const EXIT = {
-  /** Every file found was converted. */
+  /** Every file converted, and none of them lost anything worth mentioning. */
   OK: 0,
-  /** Some files need a human look. The rest converted. */
+  /** Some files need a human look. */
   ATTENTION: 1,
-  /** Nothing convertible: no .pub files found, or not one of them could be converted. */
+  /** Nothing convertible: no .pub files found, or not one of them produced a file. */
   NOTHING: 2,
-  /** Bad arguments, or a folder we could not read or write. Nothing was attempted. */
+  /** Bad arguments, or a folder we could not read or write. */
   USAGE: 3,
 } as const;
 

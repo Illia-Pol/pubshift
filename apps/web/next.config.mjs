@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { cspHeaderValue } from './lib/csp.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const emitDir = resolve(here, '../../packages/core/src/emit');
@@ -46,26 +47,12 @@ const isDev = process.env.NODE_ENV === 'development';
 const paymentsEnabled = process.env.PUBSHIFT_PAYMENTS === '1';
 
 /**
- * The whole product is "your document never leaves this tab". `connect-src 'self'`
- * is that promise written somewhere the browser enforces it: if any dependency
- * ever tries to POST a file anywhere, the request fails instead of succeeding
- * quietly. `wasm-unsafe-eval` is what lets the Publisher reader instantiate;
- * `blob:` covers the worker and the page previews, both of which are built in
- * memory from the user's own file.
+ * The policy itself lives in `lib/csp.mjs`, because it is also emitted into the
+ * document head as a `<meta http-equiv>` by `app/layout.tsx` — which is the only
+ * copy that survives on a static host with no header configuration. One source,
+ * two deliveries, no drift. See the comment at the top of that file.
  */
-const csp = [
-  "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:${isDev ? " 'unsafe-eval'" : ''}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "connect-src 'self' blob:",
-  "worker-src 'self' blob:",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'none'",
-  "frame-ancestors 'none'",
-].join('; ');
+const csp = cspHeaderValue({ dev: isDev });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

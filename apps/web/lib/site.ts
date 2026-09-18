@@ -15,17 +15,39 @@ export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://pubshift.a
 
 /** Publisher leaves Microsoft 365 on this date. */
 export const RETIREMENT_DATE = '1 October 2026';
-/** Support for the bought-outright versions ends here; the software keeps running. */
+/**
+ * End of support for the bought-outright **2021** versions — Office LTSC 2021 and
+ * the consumer Office 2021 — which is what Microsoft's announcement actually ties
+ * to this date. The software keeps running; only the updates stop.
+ *
+ * It is specifically *not* the date for Publisher 2019. Attaching 2019 to it, as
+ * this site used to, tells a 2019 owner they have another year of support when they
+ * have none: see `OFFICE_2019_SUPPORT_ENDED`.
+ */
 export const SUPPORT_END_DATE = '13 October 2026';
+/**
+ * Office 2019 is already out of support — it went in October 2025, before this site
+ * existed. Nothing on the 2026 timetable applies to it, and saying otherwise would
+ * be reassuring somebody about a deadline they have already missed.
+ */
+export const OFFICE_2019_SUPPORT_ENDED = 'October 2025';
 
 /**
  * Measured on `packages/core/test/corpus/` — 31 real Publisher files, 97 through 2010.
  * docs/FIDELITY.md: 24 real content, 1 partial, 5 empty, 1 not a Publisher file.
+ *
+ * `intact` and `partial` are separate on purpose. They were once added together and
+ * reported as "25 come out with their contents intact", which is not what the
+ * measurement says: the partial file lost its text. This audience is being asked to
+ * trust a number about their own files, and a number that flatters us by one is
+ * worth less than nothing — docs/POSITIONING.md.
  */
 export const CORPUS = {
   total: 31,
-  /** Files that come out with something in them (24 full + 1 partial). */
-  withContent: 25,
+  /** Come out with their contents intact: text and/or pictures, all of it we can see. */
+  intact: 24,
+  /** `fdo64631-2.pub`: the shapes came through, the text did not. Flagged to the user. */
+  partial: 1,
   /** Parse without error and contain nothing we can see. The honest weak point. */
   empty: 5,
   /** Not a Publisher file at all; correctly rejected. */
@@ -38,6 +60,6 @@ export const CORPUS = {
 /** docs/FIDELITY.md, WebAssembly parity section. */
 export const ENGINE = {
   wasmSizeKB: 465,
-  coldLoadMs: 3.1,
-  medianFileMs: 0.5,
+  coldLoadMs: 2.6,
+  medianFileMs: 0.6,
 } as const;

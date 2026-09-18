@@ -1,7 +1,25 @@
 import type { Metadata, Viewport } from 'next';
 import Link from 'next/link';
+import { cspMetaValue } from '@/lib/csp.mjs';
 import { RETIREMENT_DATE, SITE_NAME, SITE_URL } from '@/lib/site';
 import './globals.css';
+
+/**
+ * The policy, baked into every page of the static export.
+ *
+ * `headers()` in next.config.mjs does nothing under `output: 'export'` — Next says
+ * so in a build warning — so the header copy only exists where the host is told
+ * about it separately (`_headers`, `vercel.json`). On S3, nginx, GitHub Pages or a
+ * folder served off a school's own intranet box, nothing tells the host anything,
+ * and without this tag no policy would apply at all. A meta policy needs no server
+ * configuration of any kind, which is the only way the privacy page's claim can be
+ * true of every deployment rather than of two hosting providers.
+ *
+ * `frame-ancestors` is dropped from this copy because meta may not carry it; the
+ * header copy still has it, alongside `X-Frame-Options`. Same source either way —
+ * see lib/csp.mjs.
+ */
+const CSP = cspMetaValue({ dev: process.env.NODE_ENV === 'development' });
 
 const TITLE = 'Convert a .pub file without Publisher';
 
@@ -56,6 +74,17 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        {/* React hoists this into <head> after Next's own bootstrap <script> tags —
+            there is no supported way to get in front of those. It does not weaken
+            anything that is claimed: those scripts are same-origin and would pass
+            `script-src 'self'` regardless, and the two directives the privacy page
+            rests on are checked at use rather than at parse. `connect-src` is
+            evaluated on every fetch/XHR/beacon and `form-action` on every submit,
+            all of which happen after the head has been parsed and the policy is in
+            force. Verified present in the export: see the note in lib/csp.mjs. */}
+        <meta httpEquiv="Content-Security-Policy" content={CSP} />
+      </head>
       <body className="min-h-dvh">
         <a
           href="#start"

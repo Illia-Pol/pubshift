@@ -1,6 +1,8 @@
 /** Small shared helpers for anything printed to a person. No dependencies, by design. */
 
-const ESC = '[';
+// Written as an escape rather than as a literal control byte: a raw 0x1B in a source
+// file survives neither a copy-paste nor most editors' whitespace tidying.
+const ESC = '\u001b[';
 
 export interface Paint {
   bold(s: string): string;

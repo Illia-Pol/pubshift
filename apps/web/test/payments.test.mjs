@@ -17,7 +17,13 @@
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { verifyStripeSignature } from '../lib/payments.ts';
+import {
+  MAX_CHECKOUT_BODY_BYTES,
+  MAX_WEBHOOK_BODY_BYTES,
+  preCheckStripeSignature,
+  readBodyCapped,
+  verifyStripeSignature,
+} from '../lib/payments.ts';
 
 const SECRET = 'whsec_test_2c8f1a6b4d9e3f705a1b8c6d4e2f0a9b';
 const OTHER_SECRET = 'whsec_test_rotated_9b8c7d6e5f4a3b2c1d0e9f8a';
@@ -140,4 +146,108 @@ test('tolerates whitespace in the signature header', async () => {
   const t = now();
   const result = await verifyStripeSignature(BODY, ` t=${t} , v1=${await sign(SECRET, BODY, t)} `, SECRET);
   assert.equal(result.ok, true);
+});
+
+/* --------------------------------------------------------------------------- */
+/* The body cap                                                                */
+/*                                                                             */
+/* Both routes used to buffer the whole request before any check ran, so one    */
+/* unauthenticated POST of an enormous body was an out-of-memory kill on a      */
+/* public URL. Each way that can be attempted gets a test.                      */
+/* --------------------------------------------------------------------------- */
+
+/** A Request whose body streams `chunks` and declares whatever `contentLength` says. */
+function streamingRequest(chunks, contentLength) {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+      controller.close();
+    },
+  });
+  const headers = new Headers();
+  if (contentLength !== undefined) headers.set('content-length', String(contentLength));
+  return new Request('https://example.test/api/stripe/webhook', {
+    method: 'POST',
+    body,
+    headers,
+    duplex: 'half',
+  });
+}
+
+test('a body under the cap is returned byte for byte', async () => {
+  const request = streamingRequest([BODY]);
+  const result = await readBodyCapped(request, MAX_WEBHOOK_BODY_BYTES);
+  assert.deepEqual(result, { ok: true, text: BODY });
+});
+
+test('a body split across chunks is rejoined in order', async () => {
+  const request = streamingRequest(['{"a":1,', '"b":2}']);
+  const result = await readBodyCapped(request, MAX_WEBHOOK_BODY_BYTES);
+  assert.deepEqual(result, { ok: true, text: '{"a":1,"b":2}' });
+});
+
+test('an honest oversized body is refused on Content-Length, before reading', async () => {
+  const request = streamingRequest(['x'], MAX_WEBHOOK_BODY_BYTES + 1);
+  assert.deepEqual(await readBodyCapped(request, MAX_WEBHOOK_BODY_BYTES), {
+    ok: false,
+    reason: 'TOO_LARGE',
+  });
+  // Untouched: the refusal happened before the stream was read at all.
+  assert.equal(request.bodyUsed, false);
+});
+
+test('a body that lies about its length is still refused, while it streams', async () => {
+  // No Content-Length at all, which is what a chunked request looks like.
+  const oversized = Array.from({ length: 8 }, () => 'z'.repeat(1024));
+  const request = streamingRequest(oversized);
+  assert.deepEqual(await readBodyCapped(request, 4 * 1024), { ok: false, reason: 'TOO_LARGE' });
+});
+
+test('a body exactly at the cap is allowed; one byte more is not', async () => {
+  const exact = 'y'.repeat(MAX_CHECKOUT_BODY_BYTES);
+  assert.deepEqual(await readBodyCapped(streamingRequest([exact]), MAX_CHECKOUT_BODY_BYTES), {
+    ok: true,
+    text: exact,
+  });
+  assert.deepEqual(
+    await readBodyCapped(streamingRequest([`${exact}y`]), MAX_CHECKOUT_BODY_BYTES),
+    { ok: false, reason: 'TOO_LARGE' },
+  );
+});
+
+test('a request with no body at all reads as empty rather than throwing', async () => {
+  const request = new Request('https://example.test/api/checkout', { method: 'POST' });
+  assert.deepEqual(await readBodyCapped(request, MAX_CHECKOUT_BODY_BYTES), { ok: true, text: '' });
+});
+
+/* --------------------------------------------------------------------------- */
+/* The header-only pre-check: what the route can refuse before reading anything */
+/* --------------------------------------------------------------------------- */
+
+test('the pre-check refuses a missing, garbled or stale signature with no body at all', async () => {
+  assert.deepEqual(preCheckStripeSignature(null), { ok: false, reason: 'NO_SIGNATURE' });
+  assert.deepEqual(preCheckStripeSignature('nonsense'), {
+    ok: false,
+    reason: 'MALFORMED_SIGNATURE',
+  });
+  assert.deepEqual(preCheckStripeSignature(`t=${now()},v0=deadbeef`), {
+    ok: false,
+    reason: 'MALFORMED_SIGNATURE',
+  });
+  assert.deepEqual(preCheckStripeSignature(`t=${now() - 4000},v1=deadbeef`), {
+    ok: false,
+    reason: 'TIMESTAMP_OUT_OF_TOLERANCE',
+  });
+});
+
+test('the pre-check passes a well-formed fresh header, and decides nothing more', async () => {
+  const t = now();
+  const pre = preCheckStripeSignature(await header(SECRET, BODY, t));
+  assert.equal(pre.ok, true);
+  assert.equal(pre.timestamp, String(t));
+  assert.equal(pre.candidates.length, 1);
+  // It is not a verification: the same header passes the pre-check against any body,
+  // which is exactly why the HMAC still has to run afterwards.
+  assert.equal((await verifyStripeSignature('a different body', await header(SECRET, BODY, t), SECRET)).ok, false);
 });

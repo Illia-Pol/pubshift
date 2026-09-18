@@ -30,6 +30,12 @@ export interface WalkProblem {
   path: string;
   relative: string;
   reason: string;
+  /**
+   * `attention` is something the user has to deal with — a folder we could not open, a
+   * shortcut pointing nowhere. `note` is us explaining a decision we made on their
+   * behalf, which belongs in the report but not in the count of files needing a person.
+   */
+  severity: 'attention' | 'note';
 }
 
 export interface WalkResult {
@@ -138,8 +144,8 @@ export function walk(
 
   /** Real paths of directories already entered: the guard against a symlink loop. */
   const seenDirs = new Set<string>();
-  /** Real paths of files already queued: the guard against converting one file twice. */
-  const seenFiles = new Map<string, string>();
+  /** Real path -> its index in `files`: the guard against converting one file twice. */
+  const seenFiles = new Map<string, number>();
 
   const rootReal = realOrNull(root);
   if (rootReal) seenDirs.add(rootReal);
@@ -158,6 +164,7 @@ export function walk(
         path: dir,
         relative: relativeTo(dir),
         reason: describeIoError(error),
+        severity: 'attention',
       });
       return;
     }
@@ -187,6 +194,7 @@ export function walk(
               path: full,
               relative: relativeTo(full),
               reason: `This is a shortcut that no longer points anywhere. ${describeIoError(error)}`,
+              severity: 'attention',
             });
           }
           continue;
@@ -204,6 +212,7 @@ export function walk(
             path: full,
             relative: relativeTo(full),
             reason: 'This is a shortcut to another folder, and was not followed. Use --follow-symlinks to include it.',
+            severity: 'note',
           });
           continue;
         }
@@ -212,6 +221,7 @@ export function walk(
             path: full,
             relative: relativeTo(full),
             reason: `Folders are nested more than ${MAX_DEPTH} deep here, so we stopped.`,
+            severity: 'attention',
           });
           continue;
         }
@@ -232,27 +242,43 @@ export function walk(
       try {
         size = (entry.isSymbolicLink() ? statSync(full) : lstatSync(full)).size;
       } catch (error) {
-        problems.push({ path: full, relative: relativeTo(full), reason: describeIoError(error) });
+        problems.push({
+          path: full, relative: relativeTo(full), reason: describeIoError(error),
+          severity: 'attention',
+        });
         continue;
       }
+
+      const found: FoundFile = via === undefined
+        ? { path: full, relative: relativeTo(full), size }
+        : { path: full, relative: relativeTo(full), size, via };
 
       const real = realOrNull(full);
       if (real !== null) {
         const already = seenFiles.get(real);
         if (already !== undefined) {
+          const kept = files[already] as FoundFile;
+
+          // The real file wins over a shortcut to it, whichever we happened to meet
+          // first. Otherwise `Shortcut to fonts.pub` sorting before `fonts.pub` means the
+          // converted document is named after somebody's 2011 alias, and the document
+          // itself is the one reported as a duplicate.
+          const replace = kept.via !== undefined && via === undefined;
+          if (replace) files[already] = found;
+          const winner = replace ? found : kept;
+          const duplicate = replace ? kept : found;
           problems.push({
-            path: full,
-            relative: relativeTo(full),
-            reason: `This is the same file as "${relativeTo(already)}", reached through a shortcut, so it was only converted once.`,
+            path: duplicate.path,
+            relative: duplicate.relative,
+            reason: `This is the same file as "${winner.relative}", reached through a shortcut, so it was only converted once.`,
+            severity: 'note',
           });
           continue;
         }
-        seenFiles.set(real, full);
+        seenFiles.set(real, files.length);
       }
 
-      files.push(via === undefined
-        ? { path: full, relative: relativeTo(full), size }
-        : { path: full, relative: relativeTo(full), size, via });
+      files.push(found);
     }
   };
 

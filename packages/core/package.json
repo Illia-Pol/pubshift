@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "type": "module",
   "main": "./src/index.ts",
+  "//exports": "Subpaths so a consumer outside the web app (packages/cli) can reach an emitter without a bundler alias. apps/web keeps using its own @emit/* alias, which swaps in a stub for an emitter that is not written yet; this does not. The note lives out here because every key inside \"exports\" must start with \".\": Node rejects the whole package config otherwise (ERR_INVALID_PACKAGE_CONFIG) and webpack refuses to resolve the package at all.",
   "exports": {
     ".": "./src/index.ts",
-    "//emit": "Subpaths so a consumer outside the web app (packages/cli) can reach an emitter without a bundler alias. apps/web keeps using its own @emit/* alias, which swaps in a stub for an emitter that is not written yet; this does not.",
     "./emit/pptx": "./src/emit/pptx.ts",
     "./emit/docx": "./src/emit/docx.ts",
     "./emit/pdf": "./src/emit/pdf.ts",

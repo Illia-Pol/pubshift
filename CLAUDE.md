@@ -39,3 +39,29 @@ tools/fidelity/ objective conversion-quality harness
 ```bash
 npm run build:native && npm test && node tools/fidelity/run.mjs
 ```
+
+## Business context lives in docs/business/
+
+Brought in from the strategy session on 2026-09-18. Read `docs/business/OPERATING-RULES.md` before
+writing anything user-facing, and `docs/business/market.md` and `rails.md` before any launch plan.
+Four rules from there bind this repo too:
+
+- **No figure reaches a user without a primary source.** A competitor's price comes from that
+  competitor's own page, never from a comparison article. On this project a claimed incumbent price
+  turned out to be a rival's invention five times running. No source, no number in the text.
+- **Claim no accuracy that has not been measured.** That is what `tools/fidelity/` exists for; the
+  numbers in `docs/FIDELITY.md` are the only ones allowed on the site.
+- **Say plainly that LibreOffice Draw opens .pub for free.** Hiding it loses: anyone finds it in a
+  minute. We position on what free does not give, not on pretending it does not exist.
+- **Nothing is published outward without the owner's explicit say-so** — posts, emails, community
+  replies. Draft first, send never without asking.
+
+`docs/business/rails.md` carries the constraint that dominates every commercial plan: the owner is a
+Belarusian citizen in Belarus, and **no payment rail for a web product is reliably open**. The product
+can be finished while the till is not. Never write a launch plan that assumes a working checkout.
+
+## Open question this repo cannot answer
+
+`docs/business/metrics.md` asks for honest thresholds — how many visits mean the channel works, what
+conversion rate means the product is sellable, and at what result the project stops — **set before
+launch**. A threshold chosen after seeing the numbers is not a threshold. They are not set yet.
