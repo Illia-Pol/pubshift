@@ -86,6 +86,14 @@ export interface FileResult {
   pages: number;
   /** Fidelity losses, still as codes. `report.ts` turns them into sentences. */
   warnings: Warning[];
+  /**
+   * Things that went wrong *operationally* — the disk was full, the folder was not
+   * writable, an emitter threw. Deliberately NOT `Warning[]`: a `Warning` is resolved to
+   * canned prose through its `WarningCode`, so routing "the disk is full" through
+   * `SHAPE_APPROXIMATED` reached the user as "An unusual shape was redrawn as closely as
+   * we could." These sentences are already written for a person and are shown verbatim.
+   */
+  problems?: string[];
   /** Absolute path on this disk. Carried for the JSON report and for `--verbose`. */
   absolute?: string;
   /**

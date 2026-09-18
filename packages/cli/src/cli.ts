@@ -175,22 +175,30 @@ async function runFiles(
     }
   };
 
-  if (options.jobs <= 1) return oneAtATime();
-
+  // Even one-at-a-time goes through a worker. A malformed .pub can put libmspub into a
+  // loop inside WebAssembly, and a CPU-bound loop cannot be interrupted on the thread it
+  // is running on — so converting in-process means one damaged file hangs the whole run
+  // before a single output or report line exists. Terminating a worker is the only way
+  // out, and pool.ts's per-file timeout is what does it.
+  //
   // No point starting eight readers for three bulletins: each one is its own copy of the
   // WebAssembly module and costs memory whether or not it is given anything to do.
-  const pool = openPool(Math.min(options.jobs, files.length), options);
+  const lanes = Math.max(1, Math.min(options.jobs, files.length));
+  const pool = openPool(lanes, options);
   if (pool === null) {
-    // No worker module beside us — a source checkout rather than a built install. Slower
-    // is better than refusing to run.
-    if (options.verbose) progress.note('Converting one file at a time.');
+    // No worker module beside us — a source checkout rather than a built install. There
+    // is no worker to terminate here, so a damaged file can still hang this path; say so
+    // rather than let it look safe.
+    if (options.verbose) {
+      progress.note('Converting one file at a time (no reader to run in the background).');
+    }
     return oneAtATime();
   }
 
   try {
     let next = 0;
     await Promise.all(
-      Array.from({ length: Math.min(options.jobs, files.length) }, async () => {
+      Array.from({ length: lanes }, async () => {
         for (;;) {
           const index = next++;
           const file = files[index];

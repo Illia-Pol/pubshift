@@ -150,6 +150,8 @@ export interface Produced {
   textLength: number;
   images: number;
   warnings: Warning[];
+  /** Operational failures, verbatim. Kept apart from `warnings` — see FileResult.problems. */
+  problems?: string[];
   format?: FormatChoice;
   parts: EmittedPart[];
   ms: number;
@@ -313,6 +315,8 @@ export async function produce(file: FoundFile, options: Options): Promise<Produc
 
   const warnings = new WarningBag();
   warnings.addAll(doc.warnings);
+  // Operational failures, kept apart from fidelity losses — see FileResult.problems.
+  const problems: string[] = [];
 
   // `check` and `--dry-run` stop here. Everything above is the part that decides whether
   // a file converts, and it has already run for real; what is left is only writing.
@@ -326,6 +330,7 @@ export async function produce(file: FoundFile, options: Options): Promise<Produc
     }
     return {
       status: 'ready', ...counts, warnings: warnings.all, parts, ms: Date.now() - started,
+    ...(problems.length > 0 ? { problems } : {}),
       ...(choice === undefined ? {} : { format: choice }),
       ...(verdict.verdict === 'partial' ? { message: verdict.message } : {}),
     };
@@ -336,13 +341,10 @@ export async function produce(file: FoundFile, options: Options): Promise<Produc
     try {
       parts.push(...await emit(doc, format, options, warnings));
     } catch (error) {
-      warnings.add({
-        code: 'SHAPE_APPROXIMATED',
-        message: messageOf(
-          error,
-          `We read this publication but could not write the ${format.toUpperCase()} version of it.`,
-        ),
-      });
+      problems.push(messageOf(
+        error,
+        `We read this publication but could not write the ${format.toUpperCase()} version of it.`,
+      ));
     }
     // emitPDF reports through doc.warnings rather than a return value.
     warnings.addAll(doc.warnings);
@@ -353,6 +355,7 @@ export async function produce(file: FoundFile, options: Options): Promise<Produc
       status: 'failed',
       message: 'We read this publication but could not produce a converted file from it.',
       ...counts, warnings: warnings.all, parts: [], ms: Date.now() - started,
+      ...(problems.length > 0 ? { problems } : {}),
     };
   }
 
@@ -422,6 +425,7 @@ export async function writeProduced(
   const relativeDir = path.dirname(file.relative) === '.' ? '' : path.dirname(file.relative);
   const stem = stemOf(file.path);
   const written: OutputFile[] = [];
+  const problems: string[] = [...(produced.problems ?? [])];
   const warnings = new WarningBag();
   warnings.addAll(produced.warnings);
   let failures = 0;
@@ -466,18 +470,19 @@ export async function writeProduced(
     } catch (error) {
       failures++;
       const code = (error as NodeJS.ErrnoException).code;
-      warnings.add({
-        code: 'SHAPE_APPROXIMATED',
-        message:
-          code === 'ENOSPC' ? 'The disk is full, so this could not be written.'
-            : code === 'EACCES' || code === 'EPERM'
-              ? `We do not have permission to write into "${path.dirname(claim.path)}".`
-              : `We could not write "${path.basename(claim.path)}" (${code ?? 'unknown error'}).`,
-      });
+      problems.push(
+        code === 'ENOSPC' ? 'The disk is full, so this could not be written.'
+          : code === 'EACCES' || code === 'EPERM'
+            ? `We do not have permission to write into "${path.dirname(claim.path)}".`
+            : `We could not write "${path.basename(claim.path)}" (${code ?? 'unknown error'}).`,
+      );
     }
   }
 
-  const result: FileResult = { ...base, warnings: warnings.all, outputs: written };
+  const result: FileResult = {
+    ...base, warnings: warnings.all, outputs: written,
+    ...(problems.length > 0 ? { problems } : {}),
+  };
 
   if (written.length === 0) {
     if (skipped > 0 && failures === 0) {

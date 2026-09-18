@@ -123,13 +123,19 @@ export function describeLoss(group: LossGroup): string {
 
 /** Every loss for one file, as sentences, worst first. */
 export function lossSentences(result: FileResult): string[] {
-  return groupLosses(result.warnings).map(describeLoss);
+  // Operational failures first, verbatim and unmapped. They are the more urgent thing to
+  // read — "the disk is full" needs acting on, a flattened gradient does not — and they
+  // deliberately do not go through describeLoss, which resolves a WarningCode to canned
+  // prose and would turn a real error into decorative text.
+  return [...(result.problems ?? []), ...groupLosses(result.warnings).map(describeLoss)];
 }
 
 /** How many separate things went wrong, for ordering one flagged file against another. */
 function lossWeight(result: FileResult): number {
   let total = 0;
   for (const w of result.warnings) total += w.count ?? 1;
+  // An operational failure outranks any number of fidelity losses when ordering.
+  total += (result.problems?.length ?? 0) * 100;
   return total;
 }
 
@@ -149,7 +155,10 @@ export function needsAttention(result: FileResult): boolean {
   return (
     result.outcome === 'failed' ||
     result.outcome === 'unreadable' ||
-    result.outcome === 'converted-with-caveats'
+    result.outcome === 'converted-with-caveats' ||
+    // A file whose PDF could not be written is not a clean success, whatever else
+    // happened to it.
+    (result.problems?.length ?? 0) > 0
   );
 }
 
@@ -441,7 +450,11 @@ export function renderTextSummary(
   }
 
   out.push('');
-  if (context.out !== undefined && context.dryRun !== true) {
+  // Only point at the output folder when something is actually in it. Announcing a path
+  // after a run that wrote nothing sends someone to an empty folder to look for work we
+  // did not do.
+  const wroteSomething = results.some((r) => r.outputs.length > 0);
+  if (context.out !== undefined && context.dryRun !== true && wroteSomething) {
     out.push(`Converted files are in: ${context.out}`);
   }
   if (context.dryRun === true) out.push('This was a dry run. Nothing was written.');

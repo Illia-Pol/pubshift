@@ -13,6 +13,7 @@
 
 import os from 'node:os';
 import path from 'node:path';
+import { DEFAULT_FILE_TIMEOUT_MS } from './pool';
 
 import {
   FORMATS,
@@ -42,6 +43,8 @@ export interface Options {
   quiet: boolean;
   verbose: boolean;
   maxFileBytes: number;
+  /** Milliseconds one file may run before it is stopped. 0 disables. See pool.ts. */
+  fileTimeoutMs: number;
   colour: boolean;
 }
 
@@ -77,7 +80,20 @@ function show(value: string): string {
   return JSON.stringify(value);
 }
 
-export function parseSize(raw: string, flag: string): number {
+export /**
+ * `--file-timeout <seconds>`; 0 means wait forever. Seconds because the person setting it
+ * is thinking "give it five minutes", not in milliseconds.
+ */
+function parseTimeout(raw: string | undefined): number {
+  if (raw === undefined) return DEFAULT_FILE_TIMEOUT_MS;
+  const seconds = Number(raw);
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    throw new UsageError(`--file-timeout needs a number of seconds, not "${raw}".`);
+  }
+  return Math.round(seconds * 1000);
+}
+
+function parseSize(raw: string, flag: string): number {
   const match = /^(\d+(?:\.\d+)?)\s*(b|k|kb|m|mb|g|gb)?$/i.exec(raw.trim());
   if (!match) {
     throw new UsageError(
@@ -170,6 +186,7 @@ function parseDocxMode(raw: string): DocxMode {
 /** Long options carrying a value, mapped to the short forms that mean the same thing. */
 const VALUE_FLAGS = new Set([
   '--to', '--out', '--report', '--jobs', '--on-conflict', '--docx-mode', '--max-file-size',
+  '--file-timeout',
 ]);
 
 const SHORT: Record<string, string> = {
@@ -305,6 +322,7 @@ export function parseArgs(argv: readonly string[], cwd: string): Parsed {
     quiet,
     verbose,
     maxFileBytes: parseSize(str('--max-file-size') ?? String(DEFAULT_MAX_FILE_BYTES), '--max-file-size'),
+    fileTimeoutMs: parseTimeout(str('--file-timeout')),
     colour: !flags.has('--no-color') && !flags.has('--no-colour'),
   };
 

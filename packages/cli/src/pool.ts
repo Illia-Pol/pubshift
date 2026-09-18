@@ -64,6 +64,28 @@ function crashed(message: string): Produced {
   };
 }
 
+/**
+ * How long one file may go without a reply before we give up on it.
+ *
+ * Not a comfort measure: a malformed `.pub` can put libmspub into a loop inside
+ * WebAssembly, and a CPU-bound loop in a single JavaScript thread cannot be interrupted
+ * by any timer. Terminating the worker is the only way out, which is why conversion runs
+ * in a worker even for `--jobs 1`.
+ *
+ * Chosen against measurement, not taste: the whole 31-file corpus converts in ~0.45 s,
+ * and the slowest single publication in it takes 28 ms to parse and well under a second
+ * end to end. Two minutes is over two orders of magnitude of headroom for one file, so it
+ * cannot fire on a legitimately slow one, while still ending a stuck run inside the time
+ * someone will sit and watch it. `--file-timeout 0` disables it for anyone who would
+ * rather wait than lose a file.
+ */
+export const DEFAULT_FILE_TIMEOUT_MS = 120_000;
+
+const TIMEOUT_MESSAGE =
+  'This file took too long to read and was stopped so the rest of the folder could ' +
+  'continue. It is most likely damaged. Try it on its own, or open it in Publisher and ' +
+  'save it as PDF from there.';
+
 const CRASH_MESSAGE =
   'The converter stopped while reading this file. It may be damaged, or too large to fit ' +
   'in memory. Nothing else in this run was affected; try this one on its own, or open it ' +
@@ -72,10 +94,13 @@ const CRASH_MESSAGE =
 class Lane {
   #worker: Worker;
   readonly #entry: string;
+  readonly #timeoutMs: number;
   #pending: ((reply: Reply) => void) | null = null;
+  #timer: NodeJS.Timeout | null = null;
 
-  constructor(entry: string) {
+  constructor(entry: string, timeoutMs: number) {
     this.#entry = entry;
+    this.#timeoutMs = timeoutMs;
     this.#worker = this.#spawn();
   }
 
@@ -94,6 +119,7 @@ class Lane {
   }
 
   #settle(reply: Reply): void {
+    if (this.#timer !== null) { clearTimeout(this.#timer); this.#timer = null; }
     const pending = this.#pending;
     this.#pending = null;
     pending?.(reply);
@@ -102,6 +128,14 @@ class Lane {
   async run(request: Request): Promise<Produced> {
     const reply = await new Promise<Reply>((resolve) => {
       this.#pending = resolve;
+      if (this.#timeoutMs > 0) {
+        this.#timer = setTimeout(
+          () => this.#settle({ ok: false, fatal: false, message: TIMEOUT_MESSAGE }),
+          this.#timeoutMs,
+        );
+        // The timer must not be the reason Node stays alive once the work is done.
+        this.#timer.unref?.();
+      }
       this.#worker.postMessage(request);
     });
 
@@ -124,7 +158,8 @@ export function openPool(jobs: number, options: Options): Pool | null {
   const entry = workerEntry();
   if (entry === null) return null;
 
-  const lanes = Array.from({ length: jobs }, () => new Lane(entry));
+  const timeoutMs = options.fileTimeoutMs ?? DEFAULT_FILE_TIMEOUT_MS;
+  const lanes = Array.from({ length: jobs }, () => new Lane(entry, timeoutMs));
   const idle = [...lanes];
   const waiting: ((lane: Lane) => void)[] = [];
 
