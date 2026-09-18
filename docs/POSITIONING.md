@@ -89,3 +89,81 @@ it is information about reach, not about code.
 Accordingly the build is optimised to cost nothing to keep alive after the spike, and to leave behind
 a reusable asset: a working, tested, MPL-compatible Publisher→OOXML pipeline that no one else has
 published as open source.
+
+
+---
+
+# Correction, 2026-09-18: the main differentiator is already occupied
+
+Market research checked after this document was written found **Korva** (korva.korsund.com),
+verified on their own pages the same day:
+
+- **$49 one-time, native macOS / Windows / Linux**, built explicitly for Publisher's October 2026 end of life.
+- Their words, verbatim: *"No server, no cloud, no telemetry. Your documents never leave your computer."*
+  That is our central claim, already in market, already in those words.
+- A **free browser converter** for single files — our free tier.
+- **Batch archive conversion** in Pro — our $29 CLI.
+- A content estate (comparisons against LibreOffice, Affinity, Scribus, "migrate from Publisher")
+  and a winget package — the SEO and distribution play we had planned, already running.
+
+So differentiator #1 in this document is no longer true as written. "Nothing is uploaded" does not
+distinguish us from Korva; it distinguishes both of us from the eight upload-based free converters.
+And Korva is a full editor, which is more product than a converter for the same audience.
+
+What is still genuinely ours, and it is a much narrower claim:
+
+1. **No install at all.** Korva's privacy claim covers a native app you download. Ours runs in the
+   browser tab with nothing installed. Whether their free browser converter uploads is unverified —
+   check before claiming anything about it.
+2. **We report what broke, per file and per page.** No competitor found does this.
+3. **MPL-2.0 open source**, so the pipeline outlives the business.
+
+## The structural error underneath all of it
+
+Every version of this document, and the market research that followed, sized the *sympathetic*
+segment — small churches, volunteer-run, no software budget — and treated it as the *urgent* one.
+It is closer to the opposite.
+
+The 1 October cutoff binds **only M365 subscribers**. Perpetual Office 2016/2019/2021 holders keep
+opening and editing `.pub` indefinitely; only support ends. A no-budget, volunteer-run church is
+exactly the organisation running a decade-old perpetual Office — so it faces **no deadline at all**.
+
+The population genuinely cut off pays per seat for M365 Business Standard or above, has someone
+doing IT procurement, receives Microsoft's own migration guidance, and follows it to Word,
+PowerPoint or Canva.
+
+**Urgency and willingness to pay a stranger $39 sit in different populations.** That is a cleaner
+explanation for the missing pre-deadline demand ramp than any charitable reading of the proxies, and
+it invalidates the targeting in docs/business/channels.md as written.
+
+## What the demand proxies measured
+
+No search-volume figure was obtainable — two researchers failed, and it remains the one number that
+would settle this. It is free to get in about thirty minutes from Google Keyword Planner and nobody
+has done it. Every revenue estimate here, including the pessimistic ones, is arithmetic on an
+invented input until someone does.
+
+What was measured, with its weakness stated:
+
+- English Wikipedia pageviews for "Microsoft Publisher": September 2026 is running **9% below**
+  September 2025. No ramp into the deadline. (Measures curiosity, not "my file will not open" — but
+  the absence of any ramp is still notable.)
+- News coverage peaked **December 2025**, not in the deadline month.
+- The "save Publisher" petition framed for nonprofits and churches — the exact target segment,
+  started six months before the deadline — has **37 signatures** worldwide.
+- A $39.99 Mac `.pub` converter has sat on the App Store for 10.9 years with essentially no ratings.
+- Flash's end-of-life decay: attention settled at **~40% of the pre-deadline baseline** within two
+  quarters. The spike does not merely pass; demand ends up below where it started.
+
+## The bear case in one line, which needs no demand figure
+
+**$1,000 of gross revenue requires out-trafficking every `.pub`-specific operator in the market,
+in the first month of the domain's existence.**
+
+Honest twelve-month estimate: **$300–$1,500 gross**, concentrated in four to six weeks around
+1 October, against ~$15 of hard cost — and $3,000–4,000 of opportunity cost at the owner's hourly
+rate, which dominates every other line and is what the decision actually turns on.
+
+This does not overturn `docs/PRICING.md`'s conclusion that the free tool is the product and revenue
+is a test of distribution. It confirms it, and sharpens it: the thing worth buying here is a
+**measurement**, and it can be bought for about seven hours rather than by shipping a business.
