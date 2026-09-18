@@ -436,6 +436,8 @@ interface MediaPart {
   /** Path inside the package, e.g. `media/image1.png`. */
   path: string;
   extension: string;
+  /** Carried on the part so `[Content_Types].xml` cannot disagree with the file. */
+  contentType: string;
   base64: string;
 }
 
@@ -495,7 +497,8 @@ class Media {
 
     const declared = (asset.mime || '').toLowerCase();
     const extension = IMAGE_EXTENSION_BY_MIME[declared] ?? IMAGE_EXTENSION_BY_MIME[sniffImageMime(asset) ?? ''];
-    if (!extension) {
+    const contentType = extension === undefined ? undefined : CONTENT_TYPE_BY_EXTENSION[extension];
+    if (!extension || !contentType) {
       if (declared.includes('wmf') || declared.includes('emf')) {
         this.warnings.add('WMF_IMAGE_NOT_CONVERTED',
           'A picture is stored as a Windows metafile (WMF/EMF), which Word cannot display inside a .docx. Its place is marked in the document but the picture itself was left out.');
@@ -513,7 +516,7 @@ class Media {
       return null;
     }
 
-    return { path: `media/image${this.parts.length + 1}.${extension}`, extension, base64 };
+    return { path: `media/image${this.parts.length + 1}.${extension}`, extension, contentType, base64 };
   }
 }
 
@@ -1728,12 +1731,13 @@ function appPropertiesXml(doc: Doc): string {
     tag('Application', {}, 'Pubshift'));
 }
 
-function contentTypesXml(extensions: Set<string>, numbering: boolean): string {
+function contentTypesXml(media: MediaPart[], numbering: boolean): string {
+  const byExtension = new Map(media.map((p) => [p.extension, p.contentType]));
   const defaults =
     tag('Default', { Extension: 'rels', ContentType: 'application/vnd.openxmlformats-package.relationships+xml' }) +
     tag('Default', { Extension: 'xml', ContentType: 'application/xml' }) +
-    [...extensions].sort()
-      .map((ext) => tag('Default', { Extension: ext, ContentType: CONTENT_TYPE_BY_EXTENSION[ext] as string }))
+    [...byExtension.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([extension, contentType]) => tag('Default', { Extension: extension, ContentType: contentType }))
       .join('');
 
   const wordml = 'application/vnd.openxmlformats-officedocument.wordprocessingml';
@@ -1806,8 +1810,7 @@ export async function emitDOCX(doc: Doc, opts: EmitDOCXOptions = {}): Promise<Ui
   }, tag('w:body', {}, bodyXml));
 
   const zip = new JSZip();
-  const extensions = new Set(media.parts.map((p) => p.extension));
-  zip.file('[Content_Types].xml', contentTypesXml(extensions, numbering));
+  zip.file('[Content_Types].xml', contentTypesXml(media.parts, numbering));
   zip.file('_rels/.rels', packageRelsXml());
   zip.file('docProps/core.xml', corePropertiesXml(doc));
   zip.file('docProps/app.xml', appPropertiesXml(doc));

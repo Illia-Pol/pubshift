@@ -1,0 +1,36 @@
+{
+  "name": "@pubshift/cli",
+  "version": "0.1.0",
+  "description": "Convert a whole folder of Microsoft Publisher files to PowerPoint, Word, PDF or SVG. Runs entirely on your own computer; nothing is uploaded.",
+  "license": "MPL-2.0",
+  "type": "module",
+  "bin": {
+    "pubshift": "./bin/pubshift.mjs"
+  },
+  "exports": {
+    ".": "./dist/cli.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "vendor/",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.17"
+  },
+  "//dependencies": "Deliberately none. `node build.mjs` inlines @pubshift/core and its libraries into dist/, and copies the WebAssembly reader into vendor/, so an install pulls one tarball and needs no network, no compiler and no Homebrew.",
+  "scripts": {
+    "build": "node build.mjs",
+    "pretest": "node build.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@pubshift/core": "*",
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

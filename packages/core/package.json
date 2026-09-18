@@ -3,7 +3,14 @@
   "version": "0.1.0",
   "type": "module",
   "main": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "//emit": "Subpaths so a consumer outside the web app (packages/cli) can reach an emitter without a bundler alias. apps/web keeps using its own @emit/* alias, which swaps in a stub for an emitter that is not written yet; this does not.",
+    "./emit/pptx": "./src/emit/pptx.ts",
+    "./emit/docx": "./src/emit/docx.ts",
+    "./emit/pdf": "./src/emit/pdf.ts",
+    "./emit/svg": "./src/emit/svg.ts"
+  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

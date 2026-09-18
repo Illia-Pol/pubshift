@@ -17,9 +17,9 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { emitPDF } from '../src/emit/pdf';
 import { assess } from '../src/model/assess';
-import type { Doc, Element, Paragraph } from '../src/model/types';
+import type { Doc, Element, Paragraph, Warning } from '../src/model/types';
 import { corpusFiles, docFor, extract, NOT_A_PUB } from './helpers';
-import { contentOf, pageText } from './helpers/pdf';
+import { contentOf, opsNamed, pageText, parseOps } from './helpers/pdf';
 
 const TIMEOUT = 300_000;
 
@@ -31,6 +31,8 @@ interface Converted {
   doc: Doc;
   bytes: Uint8Array;
   file: string;
+  /** Only the warnings this emitter added — `doc.warnings` also holds the builder's. */
+  emitted: Warning[];
 }
 
 const scratch = mkdtempSync(path.join(tmpdir(), 'pubshift-pdf-'));
@@ -46,10 +48,11 @@ async function convertAll(): Promise<Converted[]> {
   const out: Converted[] = [];
   for (const name of CONVERTIBLE) {
     const doc = docFor(name);
+    const before = doc.warnings.length;
     const bytes = await emitPDF(doc);
     const file = path.join(scratch, `${name.replace(/\.pub$/, '')}.pdf`);
     writeFileSync(file, bytes);
-    out.push({ name, doc, bytes, file });
+    out.push({ name, doc, bytes, file, emitted: doc.warnings.slice(before) });
   }
   converted = out;
   return out;
@@ -335,17 +338,23 @@ describe('cost', () => {
     expect(rows).toHaveLength(25);
   }, TIMEOUT);
 
-  it('keeps every picture the corpus carries instead of falling back to a placeholder', async () => {
-    // Every picture in the corpus is a PNG, a JPEG or a BMP; none should fall back to the
-    // "not embeddable" frame, which would mean the emitter lost a picture the SVG keeps.
-    for (const { name, doc, bytes } of await convertAll()) {
-      const hasRasterAsset = Object.values(doc.assets)
-        .some((a) => /image\/(png|jpe?g|bmp)/.test(a.mime));
-      if (!hasRasterAsset) continue;
+  it('embeds every picture in the corpus rather than marking its place', async () => {
+    // The corpus holds PNGs, JPEGs, one BMP and — declared as PNGs — three GIFs. All of
+    // them are pictures a browser renders from the SVG, so a placeholder here would mean
+    // the archive format lost something the preview format kept.
+    const lost: string[] = [];
+    let drawn = 0;
+    for (const { name, doc, bytes, emitted } of await convertAll()) {
+      for (const warning of emitted) {
+        if (warning.code === 'WMF_IMAGE_NOT_CONVERTED') lost.push(`${name}: ${warning.message}`);
+      }
       for (let i = 0; i < doc.pages.length; i++) {
-        expect(await contentOf(bytes, i), `${name} p${i + 1}`).not.toContain('not embeddable');
+        drawn += opsNamed(parseOps(await contentOf(bytes, i)), 'Do').length;
       }
     }
+    expect(lost).toEqual([]);
+    // Measured on this corpus: 43 picture placements across the 25 convertible files.
+    expect(drawn).toBe(43);
   }, TIMEOUT);
 });
 

@@ -176,7 +176,18 @@ describe.skipIf(SOFFICE === undefined)('docx through LibreOffice', () => {
     const failures = report.generated
       .filter((g) => !existsSync(g.pdf) || statSync(g.pdf).size < MIN_PDF_BYTES)
       .map((g) => `${path.basename(g.docx)}: ${existsSync(g.pdf) ? `${statSync(g.pdf).size} bytes` : 'LibreOffice produced no output'}`);
-    expect(failures, `${report.generated.length - failures.length}/${report.generated.length} converted`).toEqual([]);
+
+    const total = report.generated.reduce((s, g) => s + g.bytes, 0);
+    const largest = Math.max(...report.generated.map((g) => g.bytes));
+    const documents = report.generated.length / MODES.length;
+    // Printed so the real numbers are on the record, not just the word "pass".
+    console.log(
+      `LibreOffice opened ${report.generated.length - failures.length}/${report.generated.length} generated files ` +
+      `(${documents} documents x ${MODES.join(' + ')}): ` +
+      `${(total / 1024 / 1024).toFixed(1)} MB total, largest ${Math.round(largest / 1024)} KB. ` +
+      `${report.refused.length} corpus files were refused before emitting: ${report.refused.join(', ')}.`);
+
+    expect(failures).toEqual([]);
   }, TIMEOUT);
 
   it('lays out one Word page per Publisher page in layout mode', () => {

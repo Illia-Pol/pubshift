@@ -22,6 +22,7 @@ import {
   LineCapStyle,
   LineJoinStyle,
   PDFDict,
+  PDFContext,
   PDFDocument,
   PDFFont,
   PDFName,
@@ -1413,6 +1414,241 @@ function le32(b: Uint8Array, i: number): number {
 }
 
 /**
+ * Raw pixels ready to become a PDF image XObject. `alpha`, when present, becomes an
+ * `/SMask` — the only way PDF carries per-pixel transparency.
+ */
+interface RawImage {
+  width: number;
+  height: number;
+  /** 8-bit RGB, row-major, top row first. */
+  rgb: Uint8Array;
+  /** 8-bit coverage, same layout. Absent when the image is fully opaque. */
+  alpha?: Uint8Array;
+}
+
+/** Largest pixel count decoded by hand, so a corrupt header cannot allocate a gigabyte. */
+const MAX_DECODED_PIXELS = 1 << 26;
+
+/**
+ * What a picture *actually* is, from its first bytes.
+ *
+ * The declared MIME type cannot be trusted: `923566.pub` and `fdo61579-1.pub` both carry
+ * GIFs that libmspub reports as `image/png`. A browser sniffs and renders them, so the SVG
+ * emitter never notices; pdf-lib's PNG decoder correctly refuses them, and the pictures
+ * would simply vanish from the PDF. Sniffing first is what keeps the two emitters showing
+ * the same page.
+ */
+function sniffFormat(bytes: Uint8Array): 'png' | 'jpeg' | 'gif' | 'bmp' | undefined {
+  const at = (i: number) => bytes[i] ?? -1;
+  if (at(0) === 0x89 && at(1) === 0x50 && at(2) === 0x4e && at(3) === 0x47) return 'png';
+  if (at(0) === 0xff && at(1) === 0xd8 && at(2) === 0xff) return 'jpeg';
+  if (at(0) === 0x47 && at(1) === 0x49 && at(2) === 0x46 && at(3) === 0x38) return 'gif';
+  if (at(0) === 0x42 && at(1) === 0x4d) return 'bmp';
+  return undefined;
+}
+
+/**
+ * Decodes the first frame of a GIF to RGB, with its transparent colour as an alpha channel.
+ *
+ * PDF has no GIF filter and its LZWDecode is not GIF's LZW variant — GIF packs codes
+ * least-significant-bit first and resets its table on an explicit clear code — so the
+ * image has to be expanded here. Animation is ignored: the first frame is the picture a
+ * page shows, and Publisher's clip art is static anyway.
+ */
+function decodeGIF(bytes: Uint8Array): RawImage | undefined {
+  if (bytes.length < 13 || sniffFormat(bytes) !== 'gif') return undefined;
+
+  const screenFlags = bytes[10] as number;
+  const globalTableSize = screenFlags & 0x80 ? 2 << (screenFlags & 0x07) : 0;
+  let p = 13;
+  const globalTable = readColorTable(bytes, p, globalTableSize);
+  p += globalTableSize * 3;
+
+  // Extension blocks come before the image; only the graphic control block matters, and
+  // only for the transparent colour index it may declare.
+  let transparentIndex = -1;
+  while (p < bytes.length) {
+    const block = bytes[p] as number;
+    if (block === 0x2c) break; // image descriptor
+    if (block === 0x3b) return undefined; // trailer before any image
+    if (block !== 0x21) return undefined; // not a block we understand
+    const label = bytes[p + 1] as number;
+    p += 2;
+    if (label === 0xf9 && (bytes[p] as number) >= 4) {
+      if (((bytes[p + 1] as number) & 0x01) !== 0) transparentIndex = bytes[p + 4] as number;
+    }
+    p = skipSubBlocks(bytes, p);
+    if (p < 0) return undefined;
+  }
+  if ((bytes[p] as number) !== 0x2c) return undefined;
+
+  const width = le16(bytes, p + 5);
+  const height = le16(bytes, p + 7);
+  const imageFlags = bytes[p + 9] as number;
+  p += 10;
+  if (width <= 0 || height <= 0 || width * height > MAX_DECODED_PIXELS) return undefined;
+
+  const localTableSize = imageFlags & 0x80 ? 2 << (imageFlags & 0x07) : 0;
+  const table = localTableSize > 0 ? readColorTable(bytes, p, localTableSize) : globalTable;
+  p += localTableSize * 3;
+  if (table.length === 0) return undefined;
+
+  const indices = inflateGifLZW(bytes, p, width * height);
+  if (!indices) return undefined;
+
+  const interlaced = (imageFlags & 0x40) !== 0;
+  const rgb = new Uint8Array(width * height * 3);
+  const alpha = transparentIndex >= 0 ? new Uint8Array(width * height) : undefined;
+  if (alpha) alpha.fill(0xff);
+
+  for (let row = 0; row < height; row++) {
+    const target = interlaced ? interlacedRow(row, height) : row;
+    for (let x = 0; x < width; x++) {
+      const index = indices[row * width + x] as number;
+      const entry = table[index] ?? { r: 0, g: 0, b: 0 };
+      const o = (target * width + x) * 3;
+      rgb[o] = entry.r;
+      rgb[o + 1] = entry.g;
+      rgb[o + 2] = entry.b;
+      if (alpha && index === transparentIndex) alpha[target * width + x] = 0;
+    }
+  }
+  return alpha ? { width, height, rgb, alpha } : { width, height, rgb };
+}
+
+function readColorTable(bytes: Uint8Array, at: number, entries: number): RGB255[] {
+  const table: RGB255[] = [];
+  for (let i = 0; i < entries; i++) {
+    const o = at + i * 3;
+    table.push({ r: bytes[o] ?? 0, g: bytes[o + 1] ?? 0, b: bytes[o + 2] ?? 0 });
+  }
+  return table;
+}
+
+interface RGB255 { r: number; g: number; b: number }
+
+/** Steps past a chain of length-prefixed sub-blocks; -1 if the chain runs off the end. */
+function skipSubBlocks(bytes: Uint8Array, at: number): number {
+  let p = at;
+  while (p < bytes.length) {
+    const len = bytes[p] as number;
+    if (len === 0) return p + 1;
+    p += len + 1;
+  }
+  return -1;
+}
+
+/**
+ * GIF's LZW: codes are packed LSB-first across the sub-block chain, the code width grows
+ * with the table, and a clear code resets it. Returns the index stream, or undefined if
+ * the data is truncated or malformed.
+ */
+function inflateGifLZW(bytes: Uint8Array, at: number, pixels: number): Uint8Array | undefined {
+  const minCodeSize = bytes[at] as number;
+  if (minCodeSize < 1 || minCodeSize > 11) return undefined;
+
+  // Flatten the sub-block chain first: the bit reader should not have to know about it.
+  const data: number[] = [];
+  let p = at + 1;
+  while (p < bytes.length) {
+    const len = bytes[p] as number;
+    if (len === 0) break;
+    for (let i = 1; i <= len; i++) data.push(bytes[p + i] ?? 0);
+    p += len + 1;
+  }
+  if (data.length === 0) return undefined;
+
+  const clearCode = 1 << minCodeSize;
+  const endCode = clearCode + 1;
+  const MAX_CODES = 4096;
+  const prefix = new Int16Array(MAX_CODES);
+  const suffix = new Uint8Array(MAX_CODES);
+  const out = new Uint8Array(pixels);
+  const stack = new Uint8Array(MAX_CODES);
+
+  let codeSize = minCodeSize + 1;
+  let next = endCode + 1;
+  let previous = -1;
+  let written = 0;
+  let bitBuffer = 0;
+  let bitCount = 0;
+  let cursor = 0;
+
+  for (let i = 0; i < clearCode; i++) {
+    prefix[i] = -1;
+    suffix[i] = i;
+  }
+
+  while (written < pixels) {
+    while (bitCount < codeSize) {
+      if (cursor >= data.length) return written > 0 ? out : undefined;
+      bitBuffer |= (data[cursor++] as number) << bitCount;
+      bitCount += 8;
+    }
+    const code = bitBuffer & ((1 << codeSize) - 1);
+    bitBuffer >>>= codeSize;
+    bitCount -= codeSize;
+
+    if (code === clearCode) {
+      codeSize = minCodeSize + 1;
+      next = endCode + 1;
+      previous = -1;
+      continue;
+    }
+    if (code === endCode) break;
+
+    let current = code;
+    let depth = 0;
+    // A code one past the table is the classic KwKwK case: it stands for the previous
+    // string plus its own first character.
+    if (code >= next) {
+      if (previous < 0) return undefined;
+      current = previous;
+      stack[depth++] = firstByteOf(prefix, suffix, previous);
+    }
+    while (current >= clearCode) {
+      if (depth >= MAX_CODES) return undefined;
+      stack[depth++] = suffix[current] as number;
+      current = prefix[current] as number;
+      if (current < 0) return undefined;
+    }
+    stack[depth++] = suffix[current] as number;
+
+    while (depth > 0 && written < pixels) out[written++] = stack[--depth] as number;
+
+    if (previous >= 0 && next < MAX_CODES) {
+      prefix[next] = previous;
+      suffix[next] = firstByteOf(prefix, suffix, code >= next ? previous : code);
+      next++;
+      // `>=` rather than `===`: with a 1-bit minimum code size the table already starts at
+      // the width boundary, so an equality test would never widen it and every code after
+      // the first would be read one bit short.
+      if (next >= 1 << codeSize && codeSize < 12) codeSize++;
+    }
+    previous = code;
+  }
+  return out;
+}
+
+function firstByteOf(prefix: Int16Array, suffix: Uint8Array, code: number): number {
+  let c = code;
+  let guard = 0;
+  while (c >= 0 && (prefix[c] as number) >= 0 && guard++ < 4096) c = prefix[c] as number;
+  return suffix[c] ?? 0;
+}
+
+/** GIF interlacing writes rows in four passes: every 8th from 0, 4, 2 and every 2nd from 1. */
+function interlacedRow(index: number, height: number): number {
+  const pass1 = Math.ceil(height / 8);
+  const pass2 = Math.ceil((height - 4) / 8);
+  const pass3 = Math.ceil((height - 2) / 4);
+  if (index < pass1) return index * 8;
+  if (index < pass1 + pass2) return 4 + (index - pass1) * 8;
+  if (index < pass1 + pass2 + pass3) return 2 + (index - pass1 - pass2) * 4;
+  return 1 + (index - pass1 - pass2 - pass3) * 2;
+}
+
+/**
  * Decodes an uncompressed Windows BMP to 8-bit RGB rows.
  *
  * PDF has no BMP image filter and pdf-lib embeds only PNG and JPEG, so without this a
@@ -1421,7 +1657,7 @@ function le32(b: Uint8Array, i: number): number {
  * Publisher actually writes: BI_RGB at 1, 4, 8, 24 and 32 bits per pixel. Returns
  * undefined for RLE-compressed or bitfield BMPs, which then become a placeholder.
  */
-function decodeBMP(bytes: Uint8Array): { width: number; height: number; rgb: Uint8Array } | undefined {
+function decodeBMP(bytes: Uint8Array): RawImage | undefined {
   if (bytes.length < 54 || bytes[0] !== 0x42 || bytes[1] !== 0x4d) return undefined;
   const dataOffset = le32(bytes, 10);
   const headerSize = le32(bytes, 14);
@@ -1436,7 +1672,7 @@ function decodeBMP(bytes: Uint8Array): { width: number; height: number; rgb: Uin
 
   const topDown = rawHeight < 0;
   const height = Math.abs(rawHeight);
-  if (width * height > 1 << 26) return undefined; // implausible; refuse rather than hang
+  if (width * height > MAX_DECODED_PIXELS) return undefined; // refuse rather than hang
 
   // Palette sits between the header and the pixel data for the indexed depths.
   const paletteEntries = bpp <= 8 ? (le32(bytes, 46) || 1 << bpp) : 0;
@@ -1535,39 +1771,37 @@ async function embedOne(pdf: PDFDocument, asset: Asset, warn: Warnings): Promise
     return undefined;
   }
 
+  const bytes = decodeBase64(asset.data);
+  // What the bytes are beats what the file says they are. See `sniffFormat`.
+  const format = sniffFormat(bytes)
+    ?? (PNG_MIMES.has(mime) ? 'png'
+      : JPEG_MIMES.has(mime) ? 'jpeg'
+      : BMP_MIMES.has(mime) ? 'bmp'
+      : undefined);
+
   try {
-    if (PNG_MIMES.has(mime)) {
-      const image = await pdf.embedPng(decodeBase64(asset.data));
+    if (format === 'png') {
+      const image = await pdf.embedPng(bytes);
       return { ref: image.ref, width: image.width, height: image.height };
     }
-    if (JPEG_MIMES.has(mime)) {
-      const image = await pdf.embedJpg(decodeBase64(asset.data));
+    if (format === 'jpeg') {
+      const image = await pdf.embedJpg(bytes);
       return { ref: image.ref, width: image.width, height: image.height };
     }
-    if (BMP_MIMES.has(mime)) {
-      const decoded = decodeBMP(decodeBase64(asset.data));
+    if (format === 'gif' || format === 'bmp') {
+      const decoded = format === 'gif' ? decodeGIF(bytes) : decodeBMP(bytes);
       if (!decoded) {
         warn.add(
           'WMF_IMAGE_NOT_CONVERTED',
-          'A bitmap uses a compressed BMP variant we do not decode, so its place on the ' +
-          'page is marked but the picture itself is not there.',
+          `A picture uses a ${format.toUpperCase()} variant we cannot expand, so its place ` +
+          'on the page is marked but the picture itself is not there.',
         );
         return undefined;
       }
-      const ref = pdf.context.register(
-        pdf.context.flateStream(decoded.rgb, {
-          Type: 'XObject',
-          Subtype: 'Image',
-          Width: decoded.width,
-          Height: decoded.height,
-          ColorSpace: 'DeviceRGB',
-          BitsPerComponent: 8,
-        }),
-      );
-      return { ref, width: decoded.width, height: decoded.height };
+      return embedRaw(pdf, decoded);
     }
   } catch {
-    // A malformed or exotic PNG/JPEG must not take the whole document down with it.
+    // A malformed or exotic picture must not take the whole document down with it.
     warn.add(
       'WMF_IMAGE_NOT_CONVERTED',
       `A picture (${asset.mime}) could not be decoded, so its place on the page is marked ` +
@@ -1582,6 +1816,38 @@ async function embedOne(pdf: PDFDocument, asset: Asset, warn: Warnings): Promise
     'page is marked but the picture itself is not there.',
   );
   return undefined;
+}
+
+/**
+ * Registers hand-decoded pixels as an image XObject.
+ *
+ * Deflated rather than raw: an expanded GIF or BMP is three bytes per pixel, and a 600x400
+ * logo would otherwise add 700KB to a file whose whole point is to be kept. Transparency
+ * becomes a grayscale `/SMask`, which is how PDF spells an alpha channel.
+ */
+function embedRaw(pdf: PDFDocument, image: RawImage): EmbeddedImage {
+  const dict: Parameters<PDFContext['flateStream']>[1] & object = {
+    Type: 'XObject',
+    Subtype: 'Image',
+    Width: image.width,
+    Height: image.height,
+    ColorSpace: 'DeviceRGB',
+    BitsPerComponent: 8,
+  };
+  if (image.alpha) {
+    dict.SMask = pdf.context.register(
+      pdf.context.flateStream(image.alpha, {
+        Type: 'XObject',
+        Subtype: 'Image',
+        Width: image.width,
+        Height: image.height,
+        ColorSpace: 'DeviceGray',
+        BitsPerComponent: 8,
+      }),
+    );
+  }
+  const ref = pdf.context.register(pdf.context.flateStream(image.rgb, dict));
+  return { ref, width: image.width, height: image.height };
 }
 
 /** Intrinsic size in points, from the pixel size at the Windows/GDI screen resolution. */

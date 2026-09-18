@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-17T20:14:06.025Z",
+  "generatedAt": "2026-09-17T20:24:46.014Z",
   "corpusDir": "/Users/illia-pol/Work/pubshift/packages/core/test/corpus",
-  "runDir": "/Users/illia-pol/Work/pubshift/tools/fidelity/.artifacts/runs/2026-09-17T20-12-35-886Z-48996",
+  "runDir": "/Users/illia-pol/Work/pubshift/tools/fidelity/.artifacts/runs/2026-09-17T20-22-51-075Z-58795",
   "renderer": {
     "available": true,
     "engine": "libreoffice",
@@ -61,9 +61,9 @@
     "skippedReferenceBlank": 1,
     "unreadable": 1,
     "modelErrors": 0,
-    "overall": 0.7664,
+    "overall": 0.7723,
     "flagship": 0.7721,
-    "wallMs": 89787
+    "wallMs": 114502
   },
   "byFormat": {
     "pptx": {
@@ -81,19 +81,19 @@
       "available": true,
       "filesScored": 24,
       "pagesScored": 50,
-      "score": 0.7706,
-      "meanPageScore": 0.7496,
-      "good": 9,
+      "score": 0.7939,
+      "meanPageScore": 0.7618,
+      "good": 10,
       "fair": 8,
-      "poor": 7,
+      "poor": 6,
       "failures": []
     },
     "pdf": {
       "available": true,
       "filesScored": 24,
       "pagesScored": 50,
-      "score": 0.7595,
-      "meanPageScore": 0.7433,
+      "score": 0.7601,
+      "meanPageScore": 0.744,
       "good": 8,
       "fair": 9,
       "poor": 7,
@@ -292,22 +292,22 @@
         },
         "docx": {
           "status": "scored",
-          "score": 0.659,
-          "pageMean": 0.659,
+          "score": 0.6587,
+          "pageMean": 0.6587,
           "pageCountPenalty": 1,
           "referencePages": 4,
           "outputPages": 4,
           "strippedLeadingBlankReferencePages": 0,
           "blankOutputPages": 0,
-          "bytes": 382889,
+          "bytes": 382916,
           "pages": [
             {
               "page": 1,
-              "score": 0.8338,
+              "score": 0.8324,
               "byRadius": {
-                "0": 0.756,
-                "1": 0.8338,
-                "2": 0.871
+                "0": 0.7539,
+                "1": 0.8324,
+                "2": 0.8697
               },
               "sizeMatch": true,
               "ink": {
@@ -315,14 +315,14 @@
                 "candidate": 317708,
                 "referenceCoverage": 0.4318,
                 "candidateCoverage": 0.3687,
-                "matchedReference": 291272,
-                "matchedCandidate": 283864,
+                "matchedReference": 291004,
+                "matchedCandidate": 283172,
                 "lost": 56884,
-                "recoloured": 8611
+                "recoloured": 8833
               },
               "perPixel": {
-                "exactRatio": 0.7422,
-                "tolerantRatio": 0.7744
+                "exactRatio": 0.7412,
+                "tolerantRatio": 0.7736
               },
               "diff": "diff/923566.pub/docx-p1.png"
             },
@@ -405,14 +405,14 @@
         },
         "pdf": {
           "status": "scored",
-          "score": 0.6967,
-          "pageMean": 0.6967,
+          "score": 0.7018,
+          "pageMean": 0.7018,
           "pageCountPenalty": 1,
           "referencePages": 4,
           "outputPages": 4,
           "strippedLeadingBlankReferencePages": 0,
           "blankOutputPages": 0,
-          "bytes": 377253,
+          "bytes": 379556,
           "pages": [
             {
               "page": 1,
@@ -466,26 +466,26 @@
             },
             {
               "page": 3,
-              "score": 0.6894,
+              "score": 0.7098,
               "byRadius": {
-                "0": 0.3888,
-                "1": 0.6894,
-                "2": 0.8149
+                "0": 0.412,
+                "1": 0.7098,
+                "2": 0.8318
               },
               "sizeMatch": true,
               "ink": {
                 "reference": 203716,
-                "candidate": 165915,
+                "candidate": 170272,
                 "referenceCoverage": 0.2364,
-                "candidateCoverage": 0.1925,
-                "matchedReference": 132300,
-                "matchedCandidate": 122530,
-                "lost": 38248,
-                "recoloured": 2858
+                "candidateCoverage": 0.1976,
+                "matchedReference": 137400,
+                "matchedCandidate": 128039,
+                "lost": 36556,
+                "recoloured": 50
               },
               "perPixel": {
-                "exactRatio": 0.604,
-                "tolerantRatio": 0.6528
+                "exactRatio": 0.6093,
+                "tolerantRatio": 0.658
               },
               "diff": "diff/923566.pub/pdf-p3.png"
             },
@@ -759,37 +759,37 @@
         },
         "docx": {
           "status": "scored",
-          "score": 0.5349,
-          "pageMean": 0.5349,
+          "score": 0.5408,
+          "pageMean": 0.5408,
           "pageCountPenalty": 1,
           "referencePages": 4,
           "outputPages": 4,
           "strippedLeadingBlankReferencePages": 0,
           "blankOutputPages": 1,
-          "bytes": 36510,
+          "bytes": 36533,
           "pages": [
             {
               "page": 1,
-              "score": 0.8613,
+              "score": 0.8849,
               "byRadius": {
-                "0": 0.8143,
-                "1": 0.8613,
-                "2": 0.882
+                "0": 0.8345,
+                "1": 0.8849,
+                "2": 0.899
               },
               "sizeMatch": true,
               "ink": {
                 "reference": 13760,
-                "candidate": 13970,
+                "candidate": 14013,
                 "referenceCoverage": 0.016,
-                "candidateCoverage": 0.0162,
-                "matchedReference": 11863,
-                "matchedCandidate": 12020,
-                "lost": 1682,
+                "candidateCoverage": 0.0163,
+                "matchedReference": 12192,
+                "matchedCandidate": 12384,
+                "lost": 1468,
                 "recoloured": 0
               },
               "perPixel": {
-                "exactRatio": 0.9897,
-                "tolerantRatio": 0.9919
+                "exactRatio": 0.9902,
+                "tolerantRatio": 0.9924
               },
               "diff": "diff/REG-TST2-pub2010.pub/docx-p1.png"
             },
@@ -1226,37 +1226,37 @@
         },
         "docx": {
           "status": "scored",
-          "score": 0.5359,
-          "pageMean": 0.5359,
+          "score": 0.5398,
+          "pageMean": 0.5398,
           "pageCountPenalty": 1,
           "referencePages": 4,
           "outputPages": 4,
           "strippedLeadingBlankReferencePages": 0,
           "blankOutputPages": 1,
-          "bytes": 36511,
+          "bytes": 36534,
           "pages": [
             {
               "page": 1,
-              "score": 0.8654,
+              "score": 0.8808,
               "byRadius": {
-                "0": 0.8155,
-                "1": 0.8654,
-                "2": 0.8888
+                "0": 0.8233,
+                "1": 0.8808,
+                "2": 0.8991
               },
               "sizeMatch": true,
               "ink": {
                 "reference": 13807,
-                "candidate": 13970,
+                "candidate": 14013,
                 "referenceCoverage": 0.016,
-                "candidateCoverage": 0.0162,
-                "matchedReference": 11943,
-                "matchedCandidate": 12096,
-                "lost": 1595,
+                "candidateCoverage": 0.0163,
+                "matchedReference": 12168,
+                "matchedCandidate": 12336,
+                "lost": 1470,
                 "recoloured": 0
               },
               "perPixel": {
-                "exactRatio": 0.9897,
-                "tolerantRatio": 0.9919
+                "exactRatio": 0.9899,
+                "tolerantRatio": 0.9921
               },
               "diff": "diff/REG-TST2-pub97-to-pub2007-with-pub2007.pub/docx-p1.png"
             },
@@ -2348,14 +2348,14 @@
         },
         "docx": {
           "status": "scored",
-          "score": 0.5508,
-          "pageMean": 0.5508,
+          "score": 0.5584,
+          "pageMean": 0.5584,
           "pageCountPenalty": 1,
           "referencePages": 4,
           "outputPages": 4,
           "strippedLeadingBlankReferencePages": 0,
           "blankOutputPages": 0,
-          "bytes": 20371,
+          "bytes": 20545,
           "pages": [
             {
               "page": 1,
@@ -2384,11 +2384,11 @@
             },
             {
               "page": 2,
-              "score": 0.0674,
+              "score": 0.0975,
               "byRadius": {
-                "0": 0.0475,
-                "1": 0.0674,
-                "2": 0.076
+                "0": 0.065,
+                "1": 0.0975,
+                "2": 0.1137
               },
               "sizeMatch": true,
               "ink": {
@@ -2396,14 +2396,14 @@
                 "candidate": 33553,
                 "referenceCoverage": 0.2087,
                 "candidateCoverage": 0.0376,
-                "matchedReference": 7373,
-                "matchedCandidate": 7425,
-                "lost": 161203,
-                "recoloured": 16568
+                "matchedReference": 10639,
+                "matchedCandidate": 10783,
+                "lost": 165125,
+                "recoloured": 8611
               },
               "perPixel": {
-                "exactRatio": 0.7592,
-                "tolerantRatio": 0.7657
+                "exactRatio": 0.7581,
+                "tolerantRatio": 0.7648
               },
               "diff": "diff/fdo60556-1.pub/docx-p2.png"
             },
@@ -2828,62 +2828,62 @@
         },
         "pdf": {
           "status": "scored",
-          "score": 0.8627,
-          "pageMean": 0.8627,
+          "score": 0.8712,
+          "pageMean": 0.8712,
           "pageCountPenalty": 1,
           "referencePages": 2,
           "outputPages": 2,
           "strippedLeadingBlankReferencePages": 0,
           "blankOutputPages": 0,
-          "bytes": 5337,
+          "bytes": 11815,
           "pages": [
             {
               "page": 1,
-              "score": 0.9177,
+              "score": 0.9284,
               "byRadius": {
-                "0": 0.8976,
-                "1": 0.9177,
-                "2": 0.9279
+                "0": 0.9086,
+                "1": 0.9284,
+                "2": 0.9384
               },
               "sizeMatch": true,
               "ink": {
                 "reference": 379893,
-                "candidate": 394325,
+                "candidate": 401573,
                 "referenceCoverage": 0.4261,
-                "candidateCoverage": 0.4422,
-                "matchedReference": 353427,
-                "matchedCandidate": 357111,
-                "lost": 12090,
-                "recoloured": 11734
+                "candidateCoverage": 0.4504,
+                "matchedReference": 360927,
+                "matchedCandidate": 364606,
+                "lost": 5336,
+                "recoloured": 11015
               },
               "perPixel": {
-                "exactRatio": 0.8854,
-                "tolerantRatio": 0.8953
+                "exactRatio": 0.8949,
+                "tolerantRatio": 0.9044
               },
               "diff": "diff/fdo61579-1.pub/pdf-p1.png"
             },
             {
               "page": 2,
-              "score": 0.8078,
+              "score": 0.8139,
               "byRadius": {
-                "0": 0.7553,
-                "1": 0.8078,
-                "2": 0.832
+                "0": 0.7616,
+                "1": 0.8139,
+                "2": 0.838
               },
               "sizeMatch": true,
               "ink": {
                 "reference": 217168,
-                "candidate": 223039,
+                "candidate": 225220,
                 "referenceCoverage": 0.2436,
-                "candidateCoverage": 0.2501,
-                "matchedReference": 176907,
-                "matchedCandidate": 178675,
-                "lost": 32939,
-                "recoloured": 2387
+                "candidateCoverage": 0.2526,
+                "matchedReference": 179155,
+                "matchedCandidate": 180925,
+                "lost": 30916,
+                "recoloured": 2173
               },
               "perPixel": {
-                "exactRatio": 0.8056,
-                "tolerantRatio": 0.8301
+                "exactRatio": 0.8065,
+                "tolerantRatio": 0.8324
               },
               "diff": "diff/fdo61579-1.pub/pdf-p2.png"
             }
@@ -3811,37 +3811,37 @@
         },
         "docx": {
           "status": "scored",
-          "score": 0.9003,
-          "pageMean": 0.9003,
+          "score": 0.9002,
+          "pageMean": 0.9002,
           "pageCountPenalty": 1,
           "referencePages": 4,
           "outputPages": 4,
           "strippedLeadingBlankReferencePages": 0,
           "blankOutputPages": 0,
-          "bytes": 100112,
+          "bytes": 100126,
           "pages": [
             {
               "page": 1,
-              "score": 0.9495,
+              "score": 0.9491,
               "byRadius": {
-                "0": 0.8853,
-                "1": 0.9495,
-                "2": 0.9562
+                "0": 0.885,
+                "1": 0.9491,
+                "2": 0.9556
               },
               "sizeMatch": true,
               "ink": {
                 "reference": 239064,
-                "candidate": 221357,
+                "candidate": 221605,
                 "referenceCoverage": 0.2681,
-                "candidateCoverage": 0.2483,
-                "matchedReference": 218089,
-                "matchedCandidate": 219087,
-                "lost": 17613,
+                "candidateCoverage": 0.2485,
+                "matchedReference": 218097,
+                "matchedCandidate": 219111,
+                "lost": 17635,
                 "recoloured": 1426
               },
               "perPixel": {
-                "exactRatio": 0.8777,
-                "tolerantRatio": 0.9117
+                "exactRatio": 0.8774,
+                "tolerantRatio": 0.9114
               },
               "diff": "diff/fdo68259-2.pub/docx-p1.png"
             },
@@ -5789,36 +5789,36 @@
         },
         "docx": {
           "status": "scored",
-          "score": 0.6891,
-          "pageMean": 0.6891,
+          "score": 0.7758,
+          "pageMean": 0.7758,
           "pageCountPenalty": 1,
           "referencePages": 1,
           "outputPages": 1,
           "strippedLeadingBlankReferencePages": 0,
           "blankOutputPages": 0,
-          "bytes": 3897,
+          "bytes": 3904,
           "pages": [
             {
               "page": 1,
-              "score": 0.6891,
+              "score": 0.7758,
               "byRadius": {
-                "0": 0.4361,
-                "1": 0.6891,
-                "2": 0.747
+                "0": 0.4516,
+                "1": 0.7758,
+                "2": 0.8647
               },
               "sizeMatch": true,
               "ink": {
                 "reference": 635,
-                "candidate": 539,
+                "candidate": 636,
                 "referenceCoverage": 0.0007,
-                "candidateCoverage": 0.0006,
-                "matchedReference": 409,
-                "matchedCandidate": 400,
-                "lost": 185,
+                "candidateCoverage": 0.0007,
+                "matchedReference": 492,
+                "matchedCandidate": 494,
+                "lost": 96,
                 "recoloured": 0
               },
               "perPixel": {
-                "exactRatio": 0.9986,
+                "exactRatio": 0.9985,
                 "tolerantRatio": 0.9988
               },
               "diff": "diff/table-merged.pub/docx-p1.png"
@@ -5953,22 +5953,22 @@
         },
         "docx": {
           "status": "scored",
-          "score": 0.4939,
-          "pageMean": 0.4939,
+          "score": 0.9484,
+          "pageMean": 0.9484,
           "pageCountPenalty": 1,
           "referencePages": 1,
           "outputPages": 1,
           "strippedLeadingBlankReferencePages": 0,
           "blankOutputPages": 0,
-          "bytes": 3844,
+          "bytes": 3857,
           "pages": [
             {
               "page": 1,
-              "score": 0.4939,
+              "score": 0.9484,
               "byRadius": {
-                "0": 0.2937,
-                "1": 0.4939,
-                "2": 0.6064
+                "0": 0.5781,
+                "1": 0.9484,
+                "2": 1
               },
               "sizeMatch": true,
               "ink": {
@@ -5976,14 +5976,14 @@
                 "candidate": 1158,
                 "referenceCoverage": 0.0014,
                 "candidateCoverage": 0.0013,
-                "matchedReference": 619,
-                "matchedCandidate": 548,
-                "lost": 417,
+                "matchedReference": 1127,
+                "matchedCandidate": 1114,
+                "lost": 0,
                 "recoloured": 0
               },
               "perPixel": {
-                "exactRatio": 0.997,
-                "tolerantRatio": 0.9974
+                "exactRatio": 0.9976,
+                "tolerantRatio": 0.998
               },
               "diff": "diff/tables.pub/docx-p1.png"
             }

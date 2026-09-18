@@ -1,5 +1,5 @@
 import { deflateSync } from 'node:zlib';
-import { PDFDocument, type PDFDict } from 'pdf-lib';
+import { PDFDocument, PDFName, type PDFDict } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 
 import { emitPDF } from '../src/emit/pdf';
@@ -112,6 +112,60 @@ function bmp(width: number, height: number): string {
     }
   }
   return b.toString('base64');
+}
+
+/**
+ * A real GIF, encoded the simple way: a clear code before every pixel keeps the LZW table
+ * empty, so the code width never changes and the bytes are obviously right by inspection.
+ * That is a legal GIF — decoders must honour a clear code wherever it appears.
+ */
+function gif(
+  width: number,
+  height: number,
+  pixels: number[],
+  palette: Array<[number, number, number]>,
+  transparentIndex?: number,
+): string {
+  const minCodeSize = 2; // smallest the specification allows for a 4-entry table
+  const clearCode = 1 << minCodeSize;
+  const endCode = clearCode + 1;
+  const codeSize = minCodeSize + 1;
+
+  const bits: number[] = [];
+  const pushCode = (code: number) => {
+    for (let i = 0; i < codeSize; i++) bits.push((code >> i) & 1);
+  };
+  for (const pixel of pixels) {
+    pushCode(clearCode);
+    pushCode(pixel);
+  }
+  pushCode(endCode);
+  const lzw: number[] = [];
+  for (let i = 0; i < bits.length; i += 8) {
+    let byte = 0;
+    for (let b = 0; b < 8 && i + b < bits.length; b++) byte |= (bits[i + b] as number) << b;
+    lzw.push(byte);
+  }
+
+  const out: number[] = [];
+  out.push(...new TextEncoder().encode('GIF89a'));
+  out.push(width & 0xff, width >> 8, height & 0xff, height >> 8);
+  out.push(0x80 | ((minCodeSize - 1) & 0x07), 0, 0); // global table of 1 << minCodeSize
+  for (let i = 0; i < clearCode; i++) {
+    const entry = palette[i] ?? [0, 0, 0];
+    out.push(entry[0], entry[1], entry[2]);
+  }
+  if (transparentIndex !== undefined) {
+    out.push(0x21, 0xf9, 0x04, 0x01, 0, 0, transparentIndex, 0); // graphic control extension
+  }
+  out.push(0x2c, 0, 0, 0, 0, width & 0xff, width >> 8, height & 0xff, height >> 8, 0);
+  out.push(minCodeSize);
+  for (let i = 0; i < lzw.length; i += 255) {
+    const block = lzw.slice(i, i + 255);
+    out.push(block.length, ...block);
+  }
+  out.push(0, 0x3b);
+  return Buffer.from(Uint8Array.from(out)).toString('base64');
 }
 
 function codes(d: Doc): string[] {
@@ -647,6 +701,49 @@ describe('fills', () => {
     expect(numberAt(images[0] as PDFDict, 'Width')).toBe(3);
     expect(numberAt(images[0] as PDFDict, 'Height')).toBe(2);
     expect(nameAt(images[0] as PDFDict, 'ColorSpace')).toBe('DeviceRGB');
+  });
+
+
+  it('decodes a GIF, which PDF cannot carry either', async () => {
+    const d = doc(
+      [{ kind: 'image', x: 0, y: 0, width: 40, height: 40, assetRef: 'g' } as Element],
+      { assets: { g: { data: gif(2, 2, [0, 1, 2, 3], [[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0]]), mime: 'image/gif' } } },
+    );
+    const bytes = await emitPDF(d);
+    expect(codes(d)).not.toContain('WMF_IMAGE_NOT_CONVERTED');
+    const images = await imageDictsOf(bytes);
+    expect(images).toHaveLength(1);
+    expect(numberAt(images[0] as PDFDict, 'Width')).toBe(2);
+    expect(numberAt(images[0] as PDFDict, 'Height')).toBe(2);
+    expect(nameAt(images[0] as PDFDict, 'ColorSpace')).toBe('DeviceRGB');
+  });
+
+  it('carries a GIF transparent colour across as a soft mask', async () => {
+    const opaque = gif(2, 2, [0, 1, 0, 1], [[255, 0, 0], [0, 0, 255]]);
+    const masked = gif(2, 2, [0, 1, 0, 1], [[255, 0, 0], [0, 0, 255]], 1);
+
+    const withoutMask = await imageDictsOf(await emitPDF(doc(
+      [{ kind: 'image', x: 0, y: 0, width: 9, height: 9, assetRef: 'g' } as Element],
+      { assets: { g: { data: opaque, mime: 'image/gif' } } },
+    )));
+    const withMask = await imageDictsOf(await emitPDF(doc(
+      [{ kind: 'image', x: 0, y: 0, width: 9, height: 9, assetRef: 'g' } as Element],
+      { assets: { g: { data: masked, mime: 'image/gif' } } },
+    )));
+    expect(withoutMask[0]?.has(PDFName.of('SMask'))).toBe(false);
+    expect(withMask[0]?.has(PDFName.of('SMask'))).toBe(true);
+  });
+
+  it('believes the bytes rather than the declared type', async () => {
+    // Two corpus files store GIFs that libmspub reports as image/png. Browsers sniff, so
+    // the SVG emitter never notices; pdf-lib's PNG decoder correctly refuses them.
+    const d = doc(
+      [{ kind: 'image', x: 0, y: 0, width: 40, height: 40, assetRef: 'g' } as Element],
+      { assets: { g: { data: gif(2, 2, [0, 1, 0, 1], [[255, 0, 0], [0, 0, 255]]), mime: 'image/png' } } },
+    );
+    const bytes = await emitPDF(d);
+    expect(codes(d)).not.toContain('WMF_IMAGE_NOT_CONVERTED');
+    expect(await imageDictsOf(bytes)).toHaveLength(1);
   });
 
   it('tiles a repeating image fill and stretches a stretching one', async () => {
