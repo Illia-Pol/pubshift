@@ -32,36 +32,40 @@ Second-order benefit that matters for a founder with no audience: **marginal cos
 files on a CDN. No conversion servers, no queue, no per-file cost, no abuse surface. The product can
 sit online for years unattended at roughly the price of a domain.
 
-**2. PPTX first, not DOCX first — but only where the document has a layout.**
-Everyone converts Publisher to Word, because Microsoft's own guidance says Word. The
-reasoning behind leading with PowerPoint instead is sound: a Publisher page is
-absolutely-positioned boxes on a fixed canvas, and so is a PowerPoint slide, whereas a
-Word document is a *flow* of paragraphs.
+**2. Layout is preserved by anchoring, not by choosing PowerPoint.**
 
-Measured, the story is more specific than "PowerPoint is better", and the honest version
-is the more useful one. Across 24 scored corpus files the two formats are nearly tied on
-average — PPTX 0.772, DOCX 0.771 — but they are tied by winning different documents:
+This claim has been rewritten twice by measurement, and the second rewrite reversed it. Both
+revisions are kept here because the mistake is instructive.
 
-| Document | PPTX | DOCX |
-|---|---|---|
-| `tables.pub` | **0.960** | 0.494 |
-| `table-merged.pub` | **0.841** | 0.689 |
-| `text-style.pub` | 0.792 | **0.998** |
-| `bold-style.pub` | 0.867 | **1.000** |
-| `langs.pub` | 0.829 | **0.975** |
+*First version:* a Publisher page is absolutely-positioned boxes on a fixed canvas and so is a
+PowerPoint slide, whereas Word is a flow of paragraphs — so lead with PPTX. Every competitor
+converts to Word, following Microsoft's own guidance, and wrecks the layout.
 
-Exactly what the formats predict: a document that is genuinely laid out survives as
-slides and is mangled by a flow; a document that is really just prose in one frame
-survives Word intact and loses only a hair's-width baseline shift in PowerPoint. PPTX is
-also the steadier of the two — 3 poor scores against DOCX's 7 — which is why it stays the
-default.
+*What the corpus said:* across 24 scored files the two formats were nearly tied on average but won
+different documents. `tables.pub` scored **PPTX 0.960 against DOCX 0.494**; text-only files went the
+other way. That looked like confirmation — layout-heavy to slides, prose to Word.
 
-So the product leads with PowerPoint, offers Word plainly, and where the evidence is
-strong it says which one suits *this* file. A full shape-based heuristic was tried and
-measured first: it picked the better format on 13 of 24 files, a coin flip, and was cut
-back until it only speaks where it is right — 7 wins, 0 losses, 1 tie on the 8 files it
-now claims, silent on the other 16. A recommendation that is right half the time is worse
-than none, because it spends trust that this product has nothing else to buy.
+*What it actually was, in part, our own bug.* Measuring `tables.pub` at 0.494 sent someone to look
+at why, and the answer was not the format. LibreOffice applies `w:tblCellMar` **on top of**
+`w:trHeight` rather than inside it, so every row grew and everything below it slid down. Moving the
+vertical inset onto the cell's paragraphs took that file from **0.494 to 0.948**, and `table-merged`
+from 0.689 to 0.776.
+
+Current standings: **DOCX 0.794, PPTX 0.772, SVG 0.763, PDF 0.760.** Word is now the *highest*
+scoring format on this corpus.
+
+The theory was not wrong, it was aimed at the wrong thing. Our DOCX emitter's default is **layout
+mode**, which anchors every element with `wp:anchor` at an absolute position — it is not a flow at
+all. "Word is a river of text" is true of *flow mode*, which we also ship and clearly label, and
+true of what every other converter produces. It was never true of what we default to. Attributing a
+fidelity gap to a format when it belonged to our own emitter is the kind of error that a
+measurement catches and an argument does not.
+
+So the honest claim is narrower and stronger than the original: **we preserve layout because we
+anchor elements absolutely, in whichever format you choose.** PowerPoint and Word both hold up;
+PDF is exact and frozen; SVG is for designers. Where the evidence supports a per-document
+suggestion we make one — see `recommendFormat` — and where it does not, we say the formats are
+close and let the user try both.
 
 **3. We tell you what broke.**
 Every converter claims perfect fidelity and silently drops things. We carry a `Warning` list through

@@ -49,10 +49,19 @@ agreement at a 1px placement tolerance. 24 files, 50 pages:
 
 | Format | Score | good / fair / poor |
 |---|---|---|
-| **PPTX** (flagship) | **0.772** | 4 / 17 / 3 |
-| DOCX | 0.771 | 9 / 8 / 7 |
+| **DOCX** | **0.794** | 10 / 8 / 6 |
+| PPTX | 0.772 | 4 / 17 / 3 |
 | SVG | 0.763 | 8 / 9 / 7 |
-| PDF | 0.759 | 8 / 9 / 7 |
+| PDF | 0.760 | 8 / 9 / 7 |
+
+DOCX overtook PPTX when a real emitter bug was fixed: LibreOffice adds `w:tblCellMar` on top of
+`w:trHeight` instead of inside it, so every table row grew and pushed the rest of the page down.
+Moving the vertical inset onto the cell's paragraphs took `tables.pub` from 0.494 to **0.948** and
+`table-merged.pub` from 0.689 to 0.776. The earlier reading — that Word inherently mangles layout —
+was partly measuring our own defect. See docs/POSITIONING.md, which records the reversal.
+
+PPTX has more *fair* and fewer *poor* scores, so it remains the steadier of the two; DOCX has the
+higher mean and more outright wins.
 
 The reference is LibreOffice opening the same `.pub` — which uses libmspub, the same
 parser behind our extractor. That holds the parse constant and isolates our model and
