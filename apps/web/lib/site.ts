@@ -63,3 +63,10 @@ export const ENGINE = {
   coldLoadMs: 2.6,
   medianFileMs: 0.6,
 } as const;
+
+/**
+ * Where the code and the batch runner actually live. It is a build input because the
+ * repository does not exist yet and a download button pointing at a 404 is worse than no
+ * button — the /batch page hides it rather than shipping a dead link.
+ */
+export const REPO_URL = process.env.NEXT_PUBLIC_REPO_URL ?? '';

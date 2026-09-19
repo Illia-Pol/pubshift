@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 import InterestForm from '@/components/InterestForm';
 import { INTEREST_EMAIL, interestCaptureAvailable } from '@/lib/interest';
-import { RETIREMENT_DATE, SITE_NAME } from '@/lib/site';
+import { REPO_URL, RETIREMENT_DATE, SITE_NAME } from '@/lib/site';
 
 /**
  * `/batch` — and it exists in every build, which is the point of this file.
@@ -81,12 +81,11 @@ export default function BatchPage() {
         </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href="https://github.com/pubshift/pubshift"
-            className="rounded-xl bg-accent px-5 py-3 font-medium text-accent-ink"
-          >
-            Get the batch runner
-          </Link>
+          {REPO_URL ? (
+            <Link href={REPO_URL} className="rounded-xl bg-accent px-5 py-3 font-medium text-accent-ink">
+              Get the batch runner
+            </Link>
+          ) : null}
           <Link
             href="/"
             className="rounded-xl border border-line px-5 py-3 font-medium hover:bg-surface"

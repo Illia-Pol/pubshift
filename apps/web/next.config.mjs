@@ -47,6 +47,23 @@ const isDev = process.env.NODE_ENV === 'development';
 const paymentsEnabled = process.env.PUBSHIFT_PAYMENTS === '1';
 
 /**
+ * Serving from a subdirectory.
+ *
+ * The site is built for the root of a domain, which is what it gets on
+ * `<project>.pages.dev`, on `<user>.github.io`, and on any custom domain. A GitHub Pages
+ * *project* repository is the exception: it is served from `/<repo>/`, and every absolute
+ * path in the build would miss by one segment.
+ *
+ * So the base path is an input rather than an assumption, and the same build works on a
+ * free project URL today and on the domain later, without editing anything.
+ *
+ *   NEXT_PUBLIC_BASE_PATH=/pubshift npm run build
+ */
+const rawBasePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/$/, '');
+const basePath = rawBasePath && !rawBasePath.startsWith('/') ? `/${rawBasePath}` : rawBasePath;
+
+
+/**
  * The policy itself lives in `lib/csp.mjs`, because it is also emitted into the
  * document head as a `<meta http-equiv>` by `app/layout.tsx` — which is the only
  * copy that survives on a static host with no header configuration. One source,
@@ -67,6 +84,8 @@ const nextConfig = {
   },
 
   ...(paymentsEnabled ? {} : { output: 'export' }),
+
+  ...(basePath ? { basePath, assetPrefix: basePath } : {}),
 
   // Only `route.pay.ts` / `page.pay.tsx` are affected: with payments off the suffix is
   // not a recognised page extension, so those files are invisible to the router.

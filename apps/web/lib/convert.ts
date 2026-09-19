@@ -128,7 +128,14 @@ export function startEngine(): Promise<ExtractorHandle> {
     // It does not disturb anything else: `dist/pubshift.mjs` and `pubshift.wasm`
     // are resolved relative to this module and URL resolution drops the query, so
     // both keep their content-addressed, immutably cacheable URLs.
-    const url = engineAttempt === 1 ? WASM_ENTRY_URL : `${WASM_ENTRY_URL}?attempt=${engineAttempt}`;
+    // WASM_ENTRY_URL is absolute from the site root, which is one segment short when the
+    // site is served from a subdirectory — a GitHub Pages project repository, for example.
+    // Getting this wrong fails in the worst possible way: the page loads, looks entirely
+    // healthy, and conversion alone 404s. The base path is prefixed at the last moment so
+    // the generated asset file stays a plain fact about where the binary sits.
+    const base = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/$/, '');
+    const entry = `${base}${WASM_ENTRY_URL}`;
+    const url = engineAttempt === 1 ? entry : `${entry}?attempt=${engineAttempt}`;
     let mod: EngineModule;
     try {
       mod = (await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ url)) as EngineModule;
