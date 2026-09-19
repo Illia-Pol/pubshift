@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import DropZone from '@/components/DropZone';
 import FormatPicker from '@/components/FormatPicker';
 import PagePreview from '@/components/PagePreview';
@@ -660,6 +661,22 @@ export default function Converter() {
             );
           })}
         </ul>
+      )}
+
+      {/*
+        The one moment we know somebody has a folder rather than a file: they just dropped
+        several at once. Anything said here is said to the exact person the batch tool is
+        for, which is why it sits after their results instead of in a banner they scrolled
+        past. Three is the threshold — two files is a coincidence, three is an archive.
+      */}
+      {items.length >= 3 && !busy && (
+        <p className="text-sm text-muted">
+          Several files at once — if what you really have is a folder of them,{' '}
+          <Link href="/batch" className="underline underline-offset-2 hover:text-ink">
+            there is a free tool that does the whole folder in one pass
+          </Link>{' '}
+          and tells you which ones need a person.
+        </p>
       )}
     </div>
   );

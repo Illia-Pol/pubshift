@@ -108,6 +108,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/#faq" className="hover:text-ink">
                 Questions
               </Link>
+              <Link href="/batch" className="hover:text-ink">
+                A whole folder
+              </Link>
             </nav>
           </div>
         </header>
