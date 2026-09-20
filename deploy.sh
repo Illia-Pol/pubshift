@@ -57,8 +57,8 @@ SIZE=$(du -sh apps/web/out | cut -f1)
 echo
 echo "Ready: apps/web/out  ($FILES files, $SIZE)"
 echo
-echo "Upload that folder to any static host. It needs no server, no database and no"
-echo "build step on their side — every file is final."
+echo "For GitHub Pages: ./publish.sh   (NOT npx gh-pages — it drops the converter, see publish.sh)"
+echo "For any other static host: upload that folder as-is — every file is final."
 echo
 echo "Check afterwards, on the live site:"
 echo "  1. Drop a .pub file in. It should convert without any network request."
