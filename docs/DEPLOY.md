@@ -332,3 +332,27 @@ published binary.
 `node tools/licence/sources.mjs verify` fails the build if `third_party/` has drifted from
 the pin. Run it in CI: a source offer that points at code you did not compile is not an
 offer.
+
+---
+
+## Where it actually lives (since 2026-09-20)
+
+**Live:** https://illia-pol.github.io/pubshift/ — GitHub Pages, branch `gh-pages`, repository
+https://github.com/Illia-Pol/pubshift. Served from a subdirectory, so the build carries
+`NEXT_PUBLIC_BASE_PATH=/pubshift`; `deploy.sh` derives that from the URL.
+
+Redeploy in two commands:
+
+```bash
+./deploy.sh https://illia-pol.github.io/pubshift illiapoliakov1@gmail.com   # build for that URL
+./publish.sh                                                                  # push apps/web/out to gh-pages
+```
+
+**Do not use `npx gh-pages`.** The first deploy did, and it went out without the converter: the
+package honours the repository's `.gitignore` while globbing, ours ignores `dist/`, and the
+WebAssembly binary lives at `wasm/<hash>/dist/`. The page loaded and looked healthy while every
+conversion 404'd. `publish.sh` force-adds and refuses to push unless a `.wasm` and `.nojekyll` are
+in the commit.
+
+When a domain is pointed at the site (Settings → Pages → Custom domain), rebuild for it:
+`./deploy.sh https://<domain> <email> && ./publish.sh` — the base path becomes empty on its own.

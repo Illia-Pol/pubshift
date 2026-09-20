@@ -34,6 +34,11 @@ tools/fidelity/ objective conversion-quality harness
 - No file ever leaves the browser. Any change that introduces a server-side upload path for
   document content contradicts the product and needs an explicit decision, not a default.
 
+## Deploy
+
+Live at https://illia-pol.github.io/pubshift/ (GitHub Pages, `gh-pages` branch).
+`./deploy.sh <public-url> <email> && ./publish.sh`. Never `npx gh-pages` — see docs/DEPLOY.md.
+
 ## Commands
 
 ```bash
