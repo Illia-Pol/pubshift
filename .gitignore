@@ -25,3 +25,8 @@ apps/web/.next/
 apps/web/tsconfig.tsbuildinfo
 native/build/
 native/build.sh.bak
+
+# Машинная конфигурация: личность и ssh-алиас этого проекта.
+# Подключается из ~/.gitconfig по includeIf и не должна лежать в публичном репозитории.
+# Как воссоздать — см. CLAUDE.md.
+.gitconfig

@@ -65,3 +65,41 @@ can be finished while the till is not. Never write a launch plan that assumes a 
 `docs/business/metrics.md` asks for honest thresholds — how many visits mean the channel works, what
 conversion rate means the product is sellable, and at what result the project stops — **set before
 launch**. A threshold chosen after seeing the numbers is not a threshold. They are not set yet.
+
+## Изоляция от соседних проектов на этой машине
+
+На машине три независимых GitHub-аккаунта. Схема: `credential.helper` глобально **пустой**
+(дефолтного хелпера нет), а личность и доступ подтягиваются по каталогу через `includeIf`
+в `~/.gitconfig`.
+
+Локальный `.gitconfig` этого проекта в репозиторий не коммитится. Воссоздать:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/id_pubshift -C pubshift -N ""
+# публичный ключ -> github.com/settings/ssh/new под нужным аккаунтом
+```
+
+`~/.ssh/config`:
+```
+Host github-pubshift
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_pubshift
+    IdentitiesOnly yes
+```
+
+`~/work/pubshift/.gitconfig` задаёт `user.*`, пустой `credential.helper` и — главное —
+переписывает любой `github.com` URL на `git@github-pubshift:`. Без переписывания промах
+всё равно упал бы (пароля взять неоткуда), но падение надо заметить; переписывание делает
+ошибку невозможной, а не просто громкой.
+
+Строка в `~/.gitconfig`:
+```
+[includeIf "gitdir/i:~/work/pubshift/"]
+	path = ~/work/pubshift/.gitconfig
+```
+
+Проверка, что всё живо — должно ответить именем **этого** аккаунта:
+```bash
+ssh -T git@github-pubshift && git -C ~/work/pubshift ls-remote --get-url origin
+```
