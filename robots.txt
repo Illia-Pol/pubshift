@@ -1,0 +1,4 @@
+User-Agent: *
+Allow: /
+
+Sitemap: https://illia-pol.github.io/pubshift/sitemap.xml
