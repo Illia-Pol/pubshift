@@ -1,0 +1,52 @@
+pubshift wasm build manifest
+generated: 2026-09-17T19:44:18Z
+
+toolchain
+  emscripten: emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.9-git
+  clang:      clang version 24.0.0git
+
+third-party source
+  root: /private/tmp/claude-501/-Users-illia-pol/cdcaf96d-92b0-40f9-b037-9f16e3768b9b/scratchpad/src
+  libmspub:   08f4e6d8ae70459f1499fc6d08d052fd10d785cf (2026-05-26T11:23:01+02:00)
+  librevenge: 0.0.6 (release tree, not a git checkout)
+  boost:      emscripten port boost_headers
+  zlib:       emscripten port (-sUSE_ZLIB=1)
+  ICU:        not linked — see wasm/icu_shim.cpp and wasm/icu_shim_data.inc
+
+compiled translation units (28)
+  libmspub/src/lib/ColorReference.cpp
+  libmspub/src/lib/Coordinate.cpp
+  libmspub/src/lib/Dash.cpp
+  libmspub/src/lib/Fill.cpp
+  libmspub/src/lib/MSPUBCollector.cpp
+  libmspub/src/lib/MSPUBDocument.cpp
+  libmspub/src/lib/MSPUBMetaData.cpp
+  libmspub/src/lib/MSPUBParser.cpp
+  libmspub/src/lib/MSPUBParser2k.cpp
+  libmspub/src/lib/MSPUBParser97.cpp
+  libmspub/src/lib/PolygonUtils.cpp
+  libmspub/src/lib/Shadow.cpp
+  libmspub/src/lib/ShapeGroupElement.cpp
+  libmspub/src/lib/VectorTransformation2D.cpp
+  libmspub/src/lib/libmspub_utils.cpp
+  librevenge/src/lib/RVNGBinaryData.cpp
+  librevenge/src/lib/RVNGMemoryStream.cpp
+  librevenge/src/lib/RVNGProperty.cpp
+  librevenge/src/lib/RVNGPropertyList.cpp
+  librevenge/src/lib/RVNGPropertyListVector.cpp
+  librevenge/src/lib/RVNGString.cpp
+  librevenge/src/lib/RVNGStringVector.cpp
+  librevenge/src/lib/RVNGStreamImplementation.cpp
+  librevenge/src/lib/RVNGDirectoryStream.cpp
+  librevenge/src/lib/RVNGOLEStream.cpp
+  librevenge/src/lib/RVNGZipStream.cpp
+  wasm/icu_shim.cpp
+  wasm/api.cpp
+
+flags
+  -std=c++17 -DHAVE_CONFIG_H -DLIBMSPUB_BUILD=1 --use-port=boost_headers -sUSE_ZLIB=1 -fwasm-exceptions -fno-rtti -Wall -Wno-unused-function -Wno-unused-parameter -O3 -DNDEBUG -flto
+  -sEXPORT_ES6=1 -sMODULARIZE=1 -sEXPORT_NAME=createPubshift -sFILESYSTEM=0 -sENVIRONMENT=web,worker,node -sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=33554432 -sMAXIMUM_MEMORY=536870912 -sEXPORTED_FUNCTIONS=_pubshift_extract,_pubshift_free,_pubshift_version,_malloc,_free -sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU32,UTF8ToString -sINCOMING_MODULE_JS_API=wasmBinary,locateFile,print,printErr,instantiateWasm --js-library /Users/illia-pol/work/pubshift/wasm/textdecoder.js -O3 -flto --closure=0
+
+artifacts
+  pubshift.wasm  465714 bytes  sha256=3e22a766f4461d60943743b0e159b83bc91923956fd9388e419c1250ae2e09f9
+  pubshift.mjs  14055 bytes  sha256=ed62b9dd6310c036b4a019bd0540d3c33fcecc5e6c45215de65cefe71e80c35c

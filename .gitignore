@@ -8,7 +8,8 @@ dist/
 packages/cli/vendor/
 .next/
 wasm/build/
-wasm/dist/*.wasm
+# wasm/dist is committed on purpose: 465 KB, reproducible (wasm/build.sh), and without it a fresh
+# clone can build neither the site nor the CLI. wasm/test/parity.mjs guards it against drift.
 *.log
 .DS_Store
 /tmp/
