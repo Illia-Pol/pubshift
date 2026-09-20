@@ -38,7 +38,7 @@ error, copy the whole line — the wording matters more than it looks.
 ## Installing
 
 ```
-npm install -g @pubshift/cli
+npm install -g pubshift
 ```
 
 **If that prints `E404` or "not found":** the package has not been published to npm yet. Install it
@@ -49,7 +49,7 @@ time you type `git`; Windows: install it from **git-scm.com**):
 git clone https://github.com/Illia-Pol/pubshift.git
 cd pubshift
 npm install
-npm run build -w @pubshift/cli
+npm run build -w pubshift
 npm install -g ./packages/cli
 ```
 

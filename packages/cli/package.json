@@ -1,5 +1,5 @@
 {
-  "name": "@pubshift/cli",
+  "name": "pubshift",
   "version": "0.1.0",
   "description": "Convert a whole folder of Microsoft Publisher files to PowerPoint, Word, PDF or SVG. Runs entirely on your own computer; nothing is uploaded.",
   "license": "MPL-2.0",

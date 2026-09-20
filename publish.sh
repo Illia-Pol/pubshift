@@ -20,6 +20,10 @@ OUT=apps/web/out
 P=$(mktemp -d)
 trap 'rm -rf "$P"' EXIT
 cp -R "$OUT"/. "$P"/
+# GitHub Pages reads the custom domain from a CNAME file at the root of the branch, and a
+# deploy without it silently un-sets the domain. So it is part of every publish, not a
+# one-off click:   CUSTOM_DOMAIN=pubshift.app ./publish.sh
+[ -n "${CUSTOM_DOMAIN:-}" ] && printf '%s\n' "$CUSTOM_DOMAIN" > "$P/CNAME"
 cd "$P"
 git init -q . && git checkout -q -b gh-pages
 git add -A -f .
