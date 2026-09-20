@@ -19,17 +19,42 @@ website instead — it does the same conversion, in your browser, for nothing.
 You need **Node** on the computer. It is free, it is from the Node.js Foundation, and
 installing it does not change anything else on the machine.
 
-- Download the "LTS" version from the Node website and run the installer.
+- Download the "LTS" version from **nodejs.org** and run the installer.
 - Anything from version 18.17 onwards works.
 
 You do **not** need Publisher, Office, a developer account, or an internet connection after
 the install.
+
+## Where to type the commands below
+
+Every command in this guide is typed into a text window and followed by Return:
+
+- **Mac:** press `⌘ Space`, type `Terminal`, press Return.
+- **Windows:** open the Start menu, type `PowerShell`, press Return.
+
+Nothing here needs to be run "as administrator". If a command prints something that looks like an
+error, copy the whole line — the wording matters more than it looks.
 
 ## Installing
 
 ```
 npm install -g @pubshift/cli
 ```
+
+**If that prints `E404` or "not found":** the package has not been published to npm yet. Install it
+from the source repository instead — this needs `git` (Mac: it is offered automatically the first
+time you type `git`; Windows: install it from **git-scm.com**):
+
+```
+git clone https://github.com/Illia-Pol/pubshift.git
+cd pubshift
+npm install
+npm run build -w @pubshift/cli
+npm install -g ./packages/cli
+```
+
+Then `pubshift --version` should print a version number, and you can delete the `pubshift` folder
+you cloned — the installed copy does not depend on it.
 
 Then check it is there:
 

@@ -253,3 +253,19 @@ Unset `PUBSHIFT_PAYMENTS` and rebuild. The routes vanish, the site is static aga
 free converter is unchanged. Do this after the demand window closes rather than leaving a
 payment endpoint running unattended for years — but leave `NEXT_PUBLIC_PAYMENTS_ENABLED`
 unset for a month first, so that in-flight checkouts and webhook retries still land somewhere.
+
+---
+
+## Publishing the CLI — owner checklist (added 2026-09-20)
+
+The package is built, `npm pack` produces an 820 KB tarball with the WebAssembly reader vendored
+in, and a clean `npm install -g` from that tarball runs `pubshift --version` and a full `check`.
+What remains needs an npm account, which only the owner can create:
+
+```bash
+npm login                                   # once, in a browser
+cd packages/cli && npm publish --access public
+```
+
+Until then the README's first instruction returns E404, and the README says so and gives the
+tested from-source route. Do not ship the README without one of the two being true.
